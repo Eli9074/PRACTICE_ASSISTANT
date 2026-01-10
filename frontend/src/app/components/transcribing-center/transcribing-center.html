@@ -1,0 +1,49 @@
+<div class="h-100 d-flex">
+  <div class="card-glass card flex-grow-1 rounded-4 shadow-lg">
+    <h4 class="card-header bg-dark text-white rounded-top-4 text-center">Transcribing Center</h4>
+    <div class="card-body">
+      <div class="row">
+        <div class="col d-flex flex-column align-items-center">
+          <h3>New Song?</h3>
+          <button type="button" class="btn btn-dark mt-2">
+            Select MP3
+          </button>
+          <div class="mt-4 text-center">
+            <label for="songName" class="visually-hidden">Song Name</label>
+            <input
+              type="text"
+              class="form-control"
+              id="songName"
+              placeholder="Enter song name"
+            >
+          </div>
+          <div class="mt-4 text-center">
+            <label for="artist" class="visually-hidden">Artist Name</label>
+            <input
+              type="text"
+              class="form-control"
+              id="artist"
+              placeholder="Enter artist name"
+            >
+          </div>
+          <button type="button" class="btn btn-dark btn-lg mt-4">
+            Transcribe
+          </button>
+        </div>
+        <div class="col d-flex flex-column h-100">
+          <h3 class="text-center mb-3">Saved Songs</h3>
+
+          <div class="card flex-grow-1 rounded-4 w-100">
+            <div class="card-body overflow-auto">
+              <ul class="list-group list-group-flush">
+                <li class="list-group-item">Song 1</li>
+                <li class="list-group-item">Song 2</li>
+                <li class="list-group-item">Song 3</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

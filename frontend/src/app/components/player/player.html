@@ -1,0 +1,7 @@
+<div class="scrubber-wrapper px-5 py-3">
+  <div class="scrubber" #scrubber (click)="seek($event)" (mousedown)="startDrag($event)">
+    <audio #audio src="assets/song.mp3"></audio>
+    <div class="scrubber-fill" [style.width.%]="progress"></div>
+    <div class="scrubber-thumb" [style.left.%]="progress"></div>
+  </div>
+</div>

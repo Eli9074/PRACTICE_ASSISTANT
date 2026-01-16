@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import {Player} from '../components/player/player';
 
+
 @Component({
   selector: 'app-transcribing-page',
   imports: [Player],

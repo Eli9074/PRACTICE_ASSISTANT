@@ -3,46 +3,74 @@
     <h4 class="card-header bg-dark text-white rounded-top-4 text-center">Transcribing Center</h4>
     <div class="card-body">
       <div class="row">
-        <div class="col d-flex flex-column align-items-center">
+        <form class="col d-flex flex-column align-items-center"
+              (ngSubmit)="uploadSong()"
+              #songForm="ngForm">
+
           <h3>New Song?</h3>
-          <button type="button" class="btn btn-dark mt-2">
+
+          <!-- Hidden file input -->
+          <input
+            #mp3Input
+            type="file"
+            accept=".mp3"
+            hidden
+            (change)="onFileSelected($event)"
+          />
+
+          <button type="button" class="btn btn-dark mt-2" (click)="mp3Input.click()">
             Select MP3
           </button>
-          <div class="mt-4 text-center">
-            <label for="songName" class="visually-hidden">Song Name</label>
+
+          @if (selectedFile) {
+            <div class="mt-2">
+              Selected file: {{ selectedFile.name }}
+            </div>
+          }
+
+          <div class="mt-4 w-100">
             <input
               type="text"
               class="form-control"
-              id="songName"
+              name="songName"
               placeholder="Enter song name"
+              [(ngModel)]="title"
+              required
             >
           </div>
-          <div class="mt-4 text-center">
-            <label for="artist" class="visually-hidden">Artist Name</label>
+
+          <div class="mt-4 w-100">
             <input
               type="text"
               class="form-control"
-              id="artist"
+              name="artist"
               placeholder="Enter artist name"
+              [(ngModel)]="artist"
+              required
             >
           </div>
-          <a routerLink="transcribing" class="btn btn-dark btn-lg mt-4">
+
+          <button
+            type="submit"
+            class="btn btn-dark btn-lg mt-4"
+            [disabled]="!songForm.valid || !selectedFile">
             Transcribe
-          </a>
-        </div>
+          </button>
+
+        </form>
+
+
         <div class="col d-flex flex-column h-100">
           <h3 class="text-center mb-3">Saved Songs</h3>
-
           <div class="card flex-grow-1 rounded-4 w-100">
             <div class="card-body overflow-auto">
               <ul class="list-group list-group-flush">
-                <li class="list-group-item">Song 1</li>
-                <li class="list-group-item">Song 2</li>
-                <li class="list-group-item">Song 3</li>
+                <li class="list-group-item" *ngFor="let song of savedSongs">{{ song }}</li>
               </ul>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>

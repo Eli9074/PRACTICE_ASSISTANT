@@ -5,6 +5,8 @@ import {Song} from './transcribing.service';
 export class AudioPlayerService {
 
   private audio = new Audio();
+  private loopStart: number | null = null;
+  private loopEnd: number | null = null;
 
   isPlaying = signal(false);
   currentTime = signal(0);
@@ -12,10 +14,25 @@ export class AudioPlayerService {
   currentSong = signal<Song | null>(null);
 
   constructor() {
-    // keep time updated
+    // keep time updated and restart when looping enabled
     this.audio.ontimeupdate = () => {
-      this.currentTime.set(this.audio.currentTime);
+      const time = this.audio.currentTime;
+      this.currentTime.set(time);
+
+      if (this.loopStart !== null && this.loopEnd !== null) {
+        // Prevent playing before loop start
+        if (time < this.loopStart) {
+          this.audio.currentTime = this.loopStart;
+          return;
+        }
+
+        // Loop back when reaching loop end
+        if (time >= this.loopEnd - 0.05) {
+          this.audio.currentTime = this.loopStart;
+        }
+      }
     };
+
 
     this.audio.onloadedmetadata = () => {
       this.duration.set(this.audio.duration);
@@ -44,10 +61,29 @@ export class AudioPlayerService {
   }
 
   restart() {
-    this.audio.currentTime = 0;
+    if (this.loopStart !== null) {
+      this.audio.currentTime = this.loopStart;
+    } else {
+      this.audio.currentTime = 0;
+    }
   }
 
   seek(seconds: number) {
+    if (this.loopStart !== null && this.loopEnd !== null) {
+      seconds = Math.max(this.loopStart, Math.min(seconds, this.loopEnd));
+    }
+
     this.audio.currentTime = seconds;
   }
+
+  setLoop(start: number, end: number) {
+    this.loopStart = start;
+    this.loopEnd = end;
+  }
+
+  clearLoop() {
+    this.loopStart = null;
+    this.loopEnd = null;
+  }
+
 }

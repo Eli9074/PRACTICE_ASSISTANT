@@ -1,11 +1,20 @@
-import { Injectable } from '@angular/core';
+import {Injectable, signal} from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import {BehaviorSubject, Observable} from 'rxjs';
+import {SongDto} from '../model/SongDto';
+
+//Creates a frontend Song object in a way
+export interface Song {
+  file: File;
+  title: string;
+  artist: string;
+}
 
 @Injectable({
   providedIn: 'root'
 })
 export class TranscribingService {
+  currentSong = signal<Song | null>(null);
 
   constructor(private http: HttpClient) {}
 
@@ -14,6 +23,18 @@ export class TranscribingService {
   }
 
   getSavedSongs(): Observable<any> {
-    return this.http.get(`/api/songs/saved`);
+    return this.http.get<SongDto[]>(`/api/songs/saved`);
+  }
+
+  setCurrentSong(song: Song) {
+    this.currentSong.set(song);
+  }
+
+  getCurrentSong(): Song | null {
+    return this.currentSong();
+  }
+
+  getFileFromSong(songId:number){
+    return this.http.get(`/api/songs/file/${songId}`, { responseType: 'blob', observe: 'response' })
   }
 }

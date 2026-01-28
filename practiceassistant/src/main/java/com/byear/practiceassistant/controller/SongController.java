@@ -1,10 +1,13 @@
 package com.byear.practiceassistant.controller;
 
+import com.byear.practiceassistant.dto.SongDto;
 import com.byear.practiceassistant.model.Song;
 import com.byear.practiceassistant.model.User;
 import com.byear.practiceassistant.repo.SongRepository;
 import com.byear.practiceassistant.repo.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,6 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Principal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -27,12 +31,24 @@ public class SongController {
     private final SongRepository songRepository;
     private final UserRepository userRepository;
 
-    public SongController(SongRepository songRepository, SongRepository songRepository1, UserRepository userRepository) {
-        this.songRepository = songRepository1;
+    public SongController(SongRepository songRepository, UserRepository userRepository) {
+        this.songRepository = songRepository;
         this.userRepository = userRepository;
     }
 
     private final String UPLOAD_PATH = "/home/flupo/Music/BYEARMUSIC";
+
+    @GetMapping("/saved")
+    public ResponseEntity<?> getSavedSongs(Principal principal) {
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        List<Song> songs = songRepository.findByUserId(user.getId());
+        List<SongDto> songDtos = songs.stream()
+                .map(s -> new SongDto(s.getId(), s.getTitle(), s.getArtist()))
+                .toList();
+
+        return ResponseEntity.ok(songDtos);
+
+    }
 
 
     @PostMapping("/upload")
@@ -69,16 +85,16 @@ public class SongController {
         return ResponseEntity.ok(res);
     }
 
-    @GetMapping("/{songId}/file")
+    @GetMapping("/file/{songId}")
     public ResponseEntity<byte[]> getSongFile(
             @PathVariable Long songId,
-            @AuthenticationPrincipal UserDetails userDetails
+            Principal principal
     ) throws IOException {
 
         Song song = songRepository.findById(songId).orElseThrow();
 
         // verify user owns the song
-        if (!song.getUser().getUsername().equals(userDetails.getUsername())) {
+        if (!song.getUser().getUsername().equals(principal.getName())) {
             return ResponseEntity.status(403).build();
         }
 
@@ -86,7 +102,9 @@ public class SongController {
         byte[] bytes = Files.readAllBytes(path);
 
         return ResponseEntity.ok()
-                .header("Content-Type", "audio/mpeg")
+                .header(HttpHeaders.CONTENT_TYPE, "audio/mpeg")
+                .header("X-Song-Title", song.getTitle())
+                .header("X-Song-Artist", song.getArtist())
                 .body(bytes);
     }
 }

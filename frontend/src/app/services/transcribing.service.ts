@@ -37,4 +37,19 @@ export class TranscribingService {
   getFileFromSong(songId:number){
     return this.http.get(`/api/songs/file/${songId}`, { responseType: 'blob', observe: 'response' })
   }
+
+  async getStemsRegular(formData: FormData){
+      const response = await fetch('http://127.0.0.1:8000/seperate', {
+        method: 'POST',
+        body: formData,
+      });
+  }
+
+  async getStemsGuitar(formData: FormData){
+    const response = await fetch('http://127.0.0.1:8000/seperate_6', {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
 }

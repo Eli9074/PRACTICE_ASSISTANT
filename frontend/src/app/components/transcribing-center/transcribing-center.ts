@@ -64,7 +64,7 @@ export class TranscribingCenter implements OnInit{
 
         // Load file into AudioPlayerService
         const audioUrl = URL.createObjectURL(this.selectedFile!);
-        this.audioPlayer.loadSong(newSong, audioUrl);
+        this.audioPlayer.loadSong(newSong, audioUrl, true);
 
         // Navigate to the transcribing page
         this.router.navigate(['/transcribing']);
@@ -91,7 +91,7 @@ export class TranscribingCenter implements OnInit{
 
       // Load file into AudioPlayerService
       const audioUrl = URL.createObjectURL(file);
-      this.audioPlayer.loadSong(newSong, audioUrl);
+      this.audioPlayer.loadSong(newSong, audioUrl, true);
 
       // Navigate to the transcribing page
       this.router.navigate(['/transcribing']);

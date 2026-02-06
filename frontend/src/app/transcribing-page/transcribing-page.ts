@@ -1,7 +1,6 @@
-import { Component, computed, ElementRef, HostListener, OnInit, QueryList, ViewChildren } from '@angular/core';
+import {Component, computed, ElementRef, HostListener, OnInit, QueryList, ViewChild, ViewChildren} from '@angular/core';
 import { Song, TranscribingService } from '../services/transcribing.service';
 import { AudioPlayerService } from '../services/audio-player.service';
-import { LoopingService } from '../services/looping.service';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -12,129 +11,112 @@ import { FormsModule } from '@angular/forms';
 })
 export class TranscribingPage implements OnInit {
 
-  @ViewChildren('scrubber') scrubbers!: QueryList<ElementRef<HTMLDivElement>>;
+  @ViewChild('playheadScrubber', { static: true })
+  playheadScrubber!: ElementRef<HTMLDivElement>;
 
-  progress = [0, 0, 0]; // main scrubber, speed, sensitivity
-  draggingIndex: number | null = null;
+  @ViewChild('speedScrubber', { static: true })
+  speedScrubber!: ElementRef<HTMLDivElement>;
+
+
+  playheadPercent = 0;   // audio position
+  speedPercent = 50;    // centered = normal speed
+  dragging: 'playhead' | 'speed' | null = null;
 
   currentSong = computed(() => this.transcribingService.currentSong());
 
   constructor(
     private transcribingService: TranscribingService,
     public audioPlayer: AudioPlayerService,
-    public looping: LoopingService
   ) {}
 
+  private animationFrameId: number | null = null;
+
   ngOnInit() {
-    // Update main audio scrubber while playing
-    setInterval(() => {
-      if (!this.draggingIndex && this.audioPlayer.isPlaying()) {
-        this.progress[0] = (this.audioPlayer.currentTime() / this.audioPlayer.duration()) * 100 || 0;
+    const animate = () => {
+      if (this.dragging !== 'playhead' && this.audioPlayer.isPlaying()) {
+        this.playheadPercent =
+          (this.audioPlayer.getCurrentPercent() ?? 0) * 100;
       }
-    }, 200); // 5 times per second
+
+      this.animationFrameId = requestAnimationFrame(animate);
+    };
+
+    animate();
   }
 
   // ------------------------
-  // Scrubber
+  // Scrubber Dragging
   // ------------------------
-  startDrag(event: MouseEvent, index: number) {
-    this.draggingIndex = index;
-    this.setProgress(event, index);
-  }
-
-  seek(event: MouseEvent, index: number) {
-    this.setProgress(event, index);
+  startDrag(type: 'playhead' | 'speed', event: MouseEvent) {
+    this.dragging = type;
+    this.updateFromEvent(type, event);
   }
 
   @HostListener('document:mousemove', ['$event'])
   onDrag(event: MouseEvent) {
-    if (this.looping.draggingHandle) {
-      this.updateLoopFromMouse(event);
-      return;
-    }
-
-    if (this.draggingIndex === null) return;
-    this.setProgress(event, this.draggingIndex);
+    if (!this.dragging) return;
+    this.updateFromEvent(this.dragging, event);
   }
 
   @HostListener('document:mouseup')
   stopDrag() {
-    if (this.looping.draggingHandle) {
-      this.looping.stopDragging();
+    this.dragging = null;
+  }
+
+
+  private updateFromEvent(type: 'playhead' | 'speed', event: MouseEvent) {
+    const el = type === 'playhead'
+      ? this.playheadScrubber.nativeElement
+      : this.speedScrubber.nativeElement;
+
+    const rect = el.getBoundingClientRect();
+    const percent = Math.min(
+      Math.max((event.clientX - rect.left) / rect.width, 0),
+      1
+    );
+
+    if (type === 'playhead') {
+      this.playheadPercent = percent * 100;
+      this.audioPlayer.seek(percent);
+    }
+  }
+
+
+
+
+  // ------------------------
+  // Click-to-seek
+  // ------------------------
+  seekTimeline(event: MouseEvent) {
+    this.updateFromEvent('playhead', event);
+  }
+
+  seekSpeed(event: MouseEvent) {
+    this.updateFromEvent('speed', event);
+  }
+
+  async onStretchEnter(value: string){
+    const speed = parseFloat(value);
+
+    if (isNaN(speed) || speed <= 0) {
+      alert("Please enter a valid speed greater than 0");
       return;
     }
 
-    if (this.draggingIndex === 0) {
-      const seconds = (this.progress[0] / 100) * this.audioPlayer.duration();
-      this.audioPlayer.seek(seconds);
+    try {
+      this.audioPlayer.pause();
+      await this.audioPlayer.stretchAndLoadSong(speed);
+      this.audioPlayer.play(); // automatically play after stretching
+    } catch (err) {
+      console.error(err);
+      alert("Failed to stretch audio. Make sure a song is loaded.");
     }
 
-    this.draggingIndex = null;
-  }
+}
 
-  private setProgress(event: MouseEvent, index: number) {
-    const element = this.scrubbers.toArray()[index].nativeElement;
-    const rect = element.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const percent = Math.min(Math.max(x / rect.width, 0), 1);
-
-    this.progress[index] = percent * 100;
-
-    if (index === 0) {
-      const seconds = percent * this.audioPlayer.duration();
-      this.audioPlayer.seek(seconds);
+  ngOnDestroy() {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
     }
-  }
-
-  // ------------------------
-  // Looping
-  // ------------------------
-  onLoopToggle() {
-    this.looping.toggleLoop();
-  }
-
-  onLoopStartChange(event: Event) {
-    const value = (event.target as HTMLInputElement).value;
-    this.looping.setLoopStart(this.looping.parseTime(value));
-  }
-
-  onLoopEndChange(event: Event) {
-    const value = (event.target as HTMLInputElement).value;
-    this.looping.setLoopEnd(this.looping.parseTime(value));
-  }
-
-  startLoopDrag(event: MouseEvent, handle: 'start' | 'end') {
-    this.looping.startDragging(handle);
-    event.stopPropagation();
-  }
-
-  updateLoopFromMouse(event: MouseEvent) {
-    const scrubber = this.scrubbers.toArray()[0].nativeElement;
-    const rect = scrubber.getBoundingClientRect();
-    const x = Math.min(Math.max(event.clientX - rect.left, 0), rect.width);
-    const percent = x / rect.width;
-    this.looping.updateFromMouse(percent);
-  }
-
-  // ------------------------
-  // Scrubber fill & thumb
-  // ------------------------
-  get scrubberFillLeft(): number {
-    return this.looping.fillLeft;
-  }
-
-  get scrubberFillWidth(): number {
-    return this.looping.fillWidth;
-  }
-
-  // ------------------------
-  // Loop display
-  // ------------------------
-  get loopStartDisplay(): string {
-    return this.looping.formatTime(this.looping.loopStart());
-  }
-
-  get loopEndDisplay(): string {
-    return this.looping.formatTime(this.looping.loopEnd());
   }
 }

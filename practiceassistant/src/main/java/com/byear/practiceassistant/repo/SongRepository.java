@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface SongRepository extends JpaRepository<Song, Long> {
     List<Song> findByUserId(Long userId);
+    Song findByTitle(String title);
 }

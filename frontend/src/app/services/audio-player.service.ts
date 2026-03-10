@@ -203,9 +203,7 @@ export class AudioPlayerService {
     }
   }
 
-  async reloadStems(){
 
-  }
 
 
 }

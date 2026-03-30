@@ -49,8 +49,7 @@ export class TranscribingCenter{
         this.transcribingService.setCurrentSong(newSong);
 
         // Load file into AudioPlayerService
-        const audioUrl = URL.createObjectURL(this.selectedFile!);
-        this.audioPlayer.loadSong(newSong, audioUrl, true);
+        this.audioPlayer.loadSong(newSong,false, false, true);
 
         // Navigate to the transcribing page
         this.router.navigate(['/transcribing']);

@@ -39,17 +39,25 @@ export class TranscribingService {
   }
 
 
-  async saveStems(formData: FormData) {
-    try {
-      const res = await this.http
-        .post(`/api/songs/uploadStemsRegular`, formData)
-        .toPromise(); // convert Observable to Promise
-      console.log("Response from backend:", res);
-      return res;
-    } catch (err) {
-      console.error("Error uploading stems:", err);
-      throw err; // optional, rethrow if you want
-    }
+  saveStemPaths(body: { title: string; artist: string; stems: { [key: string]: string } }) {
+    return this.http.post(`/api/songs/saveStemPaths`, body);
+  }
+
+  getStemFile(songId: number, type: string): Observable<Blob> {
+    return this.http.get(`/api/songs/stems/${songId}/${type}`, { responseType: 'blob' });
+  }
+
+  separateAudio(formData: FormData): Promise<{ [key: string]: string }> {
+    return fetch("http://localhost:8000/separate", {
+      method: "POST",
+      body: formData
+    }).then(res => res.json());
+  }
+
+  fetchStemFile(url: string, filename: string): Promise<File> {
+    return fetch(url)
+      .then(r => r.blob())
+      .then(blob => new File([blob], filename, { type: "audio/wav" }));
   }
 
 

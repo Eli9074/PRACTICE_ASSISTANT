@@ -106,7 +106,7 @@ export class TranscribingPage implements OnInit {
 
     try {
       this.audioPlayer.pause();
-      await this.audioPlayer.stretchAndLoadSong(speed);
+      await this.audioPlayer.changePlaybackSpeed(speed);
       this.audioPlayer.play(); // automatically play after stretching
     } catch (err) {
       console.error(err);
@@ -116,7 +116,7 @@ export class TranscribingPage implements OnInit {
 }
 
  enableStems(){
-    this.audioPlayer.enableStems()
+    this.audioPlayer.toggleStems();
  }
 
  toggleVocals(){

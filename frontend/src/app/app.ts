@@ -10,7 +10,7 @@ import {TranscribingCenter} from './components/transcribing-center/transcribing-
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, MainContainer, RouterModule, ArpeggioCenter, GoalCenter, TranscribingCenter, Header],
+  imports: [RouterOutlet, RouterModule, Header],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })

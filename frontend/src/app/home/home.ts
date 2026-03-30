@@ -6,7 +6,7 @@ import {SavedSongCenter} from '../components/saved-song-center/saved-song-center
 
 @Component({
   selector: 'app-home',
-  imports: [TranscribingCenter, ArpeggioCenter, GoalCenter, SavedSongCenter],
+  imports: [TranscribingCenter, SavedSongCenter],
   templateUrl: './home.html',
   styleUrl: './home.scss',
 })

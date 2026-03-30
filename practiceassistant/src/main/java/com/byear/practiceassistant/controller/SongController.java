@@ -1,6 +1,7 @@
 package com.byear.practiceassistant.controller;
 
 import com.byear.practiceassistant.dto.SongDto;
+import com.byear.practiceassistant.dto.StemPathsRequest;
 import com.byear.practiceassistant.model.Song;
 import com.byear.practiceassistant.model.Stem;
 import com.byear.practiceassistant.model.StemType;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -118,50 +120,30 @@ public class SongController {
                 .body(bytes);
     }
 
-    @PostMapping("/uploadStemsRegular")
-    public ResponseEntity<?> uploadStemsRegular(
-            @RequestParam("files") MultipartFile[] files, // multiple files
-            @RequestParam("title") String title,
-            @RequestParam("artist") String artist,
+    @PostMapping("/saveStemPaths")
+    public ResponseEntity<?> saveStemPaths(
+            @RequestBody StemPathsRequest request,
             Principal principal
-    ) throws IOException {
-
-        User user = userRepository.findByUsername(principal.getName())
-                .orElseThrow();
-        Song song = songRepository.findByTitle(title);
+    ) {
+        User user = userRepository.findByUsername(principal.getName()).orElseThrow();
+        Song song = songRepository.findByTitle(request.getTitle());
         if (song == null) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body(Map.of("error", "Song not found"));
         }
 
-        // base folder for the song (already exists)
-        Path songFilePath = Paths.get(song.getFilePath()).getParent();
-
-        // create "Stems" folder inside the song folder
-        Path stemsDir = songFilePath.resolve("Stems");
-        Files.createDirectories(stemsDir);
-
         Map<String, StemType> stemMap = Map.of(
-                "vocals.wav", StemType.VOCALS,
-                "bass.wav", StemType.BASS,
-                "drums.wav", StemType.DRUMS,
-                "piano.wav", StemType.PIANO,
-                "guitar.wav", StemType.GUITAR,
-                "other.wav", StemType.OTHER
+                "vocals", StemType.VOCALS,
+                "bass",   StemType.BASS,
+                "drums",  StemType.DRUMS,
+                "other",  StemType.OTHER
         );
 
-        // iterate files and save each as Stem
-        for (MultipartFile file : files) {
-            if (file.isEmpty()) continue;
-
-            String originalFileName = Objects.requireNonNull(file.getOriginalFilename()).toLowerCase();
-            StemType type = stemMap.get(originalFileName);
-
-            Path filePath = stemsDir.resolve(file.getOriginalFilename());
-            file.transferTo(filePath.toFile());
+        for (Map.Entry<String, String> entry : request.getStems().entrySet()) {
+            StemType type = stemMap.get(entry.getKey());
 
             Stem stem = new Stem();
-            stem.setFilePath(filePath.toString());
+            stem.setFilePath(entry.getValue());
             stem.setStemType(type);
             stem.setUser(user);
             stem.setSong(song);
@@ -169,25 +151,32 @@ public class SongController {
             stemRepository.save(stem);
         }
 
-
-        Map<String, String> res = new HashMap<>();
-        res.put("message", "Stems uploaded successfully!");
-
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok(Map.of("message", "Stem paths saved successfully!"));
     }
 
     @GetMapping("/stems/{songId}/{type}")
-    public ResponseEntity<Resource> getStem(
+    public ResponseEntity<byte[]> getStem(
             @PathVariable Long songId,
             @PathVariable String type) throws IOException {
 
-        Stem stem = stemRepository.findBySongIdAndStemType(songId, StemType.valueOf(type.toUpperCase()));
+        StemType stemType;
+        try {
+            stemType = StemType.valueOf(type.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
 
-        Path path = Paths.get(stem.getFilePath());
-        Resource resource = new UrlResource(path.toUri());
+        Stem stem = stemRepository.findBySongIdAndStemType(songId, stemType);
+        if (stem == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        // Fetch from FastAPI URL
+        URL url = new URL(stem.getFilePath());
+        byte[] bytes = url.openStream().readAllBytes();
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("audio/wav"))
-                .body(resource);
+                .body(bytes);
     }
 }

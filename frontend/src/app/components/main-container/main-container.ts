@@ -6,7 +6,7 @@ import {RouterModule} from '@angular/router';
 
 @Component({
   selector: 'app-main-container',
-  imports: [Header, Home, TranscribingPage, RouterModule],
+  imports: [Header, RouterModule],
   templateUrl: './main-container.html',
   styleUrl: './main-container.scss',
 })

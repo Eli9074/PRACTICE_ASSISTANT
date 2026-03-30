@@ -1,45 +1,58 @@
-<div class="d-flex justify-content-center align-items-center bg-light pt-4">
-  <div class="card-glass card p-0 rounded-4 shadow-lg" style="max-width: 450px; width: 100%;">
-    <h4 class="card-header bg-dark text-white rounded-top-4 text-center">Login</h4>
-    <div class="card-body d-flex flex-column align-items-center">
-      <!-- Username input -->
-      <div class="w-100 mb-3">
-        <label for="username" class="form-label visually-hidden">Username</label>
+<div class="d-flex justify-content-center align-items-center pt-5">
+
+  <div class="card-neon shadow-lg" style="max-width: 420px; width: 100%;">
+
+    <!-- Accent bar -->
+    <div class="card-neon-accent"></div>
+
+    <h4 class="card-title text-center mb-4">Login</h4>
+
+    <form (ngSubmit)="submit()" #loginForm="ngForm">
+
+      <!-- Username -->
+      <div class="mb-3">
         <input
           type="text"
           id="username"
+          name="username"
           [(ngModel)]="username"
-          class="form-control"
+          class="form-control input-neon"
           placeholder="Username"
+          required
         />
       </div>
 
-      <!-- Password input -->
-      <div class="w-100 mb-3">
-        <label for="password" class="form-label visually-hidden">Password</label>
+      <!-- Password -->
+      <div class="mb-4">
         <input
           type="password"
           id="password"
+          name="password"
           [(ngModel)]="password"
-          class="form-control"
+          class="form-control input-neon"
           placeholder="Password"
+          required
         />
       </div>
 
-      <!-- Login button -->
+      <!-- Button -->
       <button
-        type="button"
-        class="btn btn-dark btn-lg w-100 mt-3"
-        (click)="submit()"
+        type="submit"
+        class="btn btn-neon w-100"
       >
         Login
       </button>
 
-      <!-- Link to register -->
-      <div class="mt-3 text-center w-100">
-        <span>Don't have an account? </span>
-        <a routerLink="/register" class="text-decoration-none">Register</a>
-      </div>
+    </form>
+
+    <!-- Register link -->
+    <div class="mt-4 text-center">
+      <span class="card-text">Don't have an account?</span>
+      <a routerLink="/register" class="ms-1 text-decoration-none text-info">
+        Register
+      </a>
     </div>
+
   </div>
+
 </div>

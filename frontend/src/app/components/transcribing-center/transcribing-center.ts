@@ -11,7 +11,7 @@ import {AudioPlayerService} from '../../services/audio-player.service';
   templateUrl: './transcribing-center.html',
   styleUrl: './transcribing-center.scss',
 })
-export class TranscribingCenter implements OnInit{
+export class TranscribingCenter{
   selectedFile: File | null = null;
   title: string = '';
   artist: string = '';
@@ -20,21 +20,7 @@ export class TranscribingCenter implements OnInit{
 
   constructor(private transcribingService: TranscribingService, private router: Router, private audioPlayer: AudioPlayerService) {}
 
-  ngOnInit(): void {
-    this.loadSavedSongs();
-  }
 
-  loadSavedSongs() {
-    this.transcribingService.getSavedSongs().subscribe({
-      next: (songs) => {
-        this.savedSongs.set(songs);
-        console.log(this.savedSongs);
-      },
-      error: (err) => {
-        console.error(err);
-      }
-    });
-  }
 
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
@@ -76,25 +62,4 @@ export class TranscribingCenter implements OnInit{
     });
   }
 
-  transcribeFromSavedSongs(songId: number) {
-    this.transcribingService.getFileFromSong(songId).subscribe(res => {
-      const audioBlob = res.body!;
-      const title = res.headers.get('X-Song-Title') ?? '';
-      const artist = res.headers.get('X-Song-Artist') ?? '';
-
-      const file = new File([audioBlob], `${title}.mp3`, { type: 'audio/mpeg' });
-
-      const newSong: Song = { file, title, artist };
-
-      // Set metadata in TranscribingService
-      this.transcribingService.setCurrentSong(newSong);
-
-      // Load file into AudioPlayerService
-      const audioUrl = URL.createObjectURL(file);
-      this.audioPlayer.loadSong(newSong, audioUrl, true);
-
-      // Navigate to the transcribing page
-      this.router.navigate(['/transcribing']);
-    });
-  }
 }

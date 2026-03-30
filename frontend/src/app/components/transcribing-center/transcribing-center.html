@@ -1,13 +1,7 @@
-<div class="h-100 d-flex">
-  <div class="card-glass card flex-grow-1 rounded-4 shadow-lg">
-    <h4 class="card-header bg-dark text-white rounded-top-4 text-center">Transcribing Center</h4>
-    <div class="card-body">
-      <div class="row">
-        <form class="col d-flex flex-column align-items-center"
+<h5 class="card-title">Transcribing Center</h5>
+        <form class="d-flex flex-column align-items-center w-100"
               (ngSubmit)="uploadSong()"
               #songForm="ngForm">
-
-          <h3>New Song?</h3>
 
           <!-- Hidden file input -->
           <input
@@ -18,20 +12,20 @@
             (change)="onFileSelected($event)"
           />
 
-          <button type="button" class="btn btn-dark mt-2" (click)="mp3Input.click()">
-            Select MP3
-          </button>
+          <div class="d-flex align-items-center gap-3 mt-2">
+            <button type="button" class="btn btn-neon" (click)="mp3Input.click()">
+              Select MP3
+            </button>
 
-          @if (selectedFile) {
-            <div class="mt-2">
-              Selected file: {{ selectedFile.name }}
+            <div class="text-truncate">
+              Selected file: {{ selectedFile?.name || 'None' }}
             </div>
-          }
+          </div>
 
-          <div class="mt-4 w-100">
+          <div class="mt-4">
             <input
               type="text"
-              class="form-control"
+              class="form-control input-neon"
               name="songName"
               placeholder="Enter song name"
               [(ngModel)]="title"
@@ -39,10 +33,10 @@
             >
           </div>
 
-          <div class="mt-4 w-100">
+          <div class="mt-4">
             <input
               type="text"
-              class="form-control"
+              class="form-control input-neon"
               name="artist"
               placeholder="Enter artist name"
               [(ngModel)]="artist"
@@ -52,35 +46,9 @@
 
           <button
             type="submit"
-            class="btn btn-dark btn-lg mt-4"
+            class="btn btn-neon mt-4"
             [disabled]="!songForm.valid || !selectedFile">
             Transcribe
           </button>
 
         </form>
-
-
-        <div class="col d-flex flex-column h-100">
-          <h3 class="text-center mb-3">Saved Songs</h3>
-          <div class="card flex-grow-1 rounded-4 w-100">
-            <div class="card-body overflow-auto">
-              @if(savedSongs().length > 0){
-                <ul class="list-group list-group-flush">
-                  @for (song of savedSongs(); track song.id) {
-                    <li
-                      class="list-group-item list-group-item-action"
-                      (click)="transcribeFromSavedSongs(song.id)"
-                    >
-                      {{ song.title }} - {{ song.artist }}
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </div>
-</div>

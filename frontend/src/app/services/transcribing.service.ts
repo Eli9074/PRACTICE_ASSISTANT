@@ -38,22 +38,20 @@ export class TranscribingService {
     return this.http.get(`/api/songs/file/${songId}`, { responseType: 'blob', observe: 'response' })
   }
 
-  async createStemsRegular(formData: FormData){
-      const response = await fetch('http://127.0.0.1:8000/seperate', {
-        method: 'POST',
-        body: formData,
-      });
+
+  async saveStems(formData: FormData) {
+    try {
+      const res = await this.http
+        .post(`/api/songs/uploadStemsRegular`, formData)
+        .toPromise(); // convert Observable to Promise
+      console.log("Response from backend:", res);
+      return res;
+    } catch (err) {
+      console.error("Error uploading stems:", err);
+      throw err; // optional, rethrow if you want
+    }
   }
 
-  async createStemsGuitar(formData: FormData){
-    const response = await fetch('http://127.0.0.1:8000/seperate_6', {
-      method: 'POST',
-      body: formData,
-    });
-  }
 
-  async saveStems(formData: FormData){
-
-  }
 
 }

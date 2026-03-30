@@ -10,7 +10,11 @@ import com.byear.practiceassistant.repo.StemRepository;
 import com.byear.practiceassistant.repo.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -68,8 +72,12 @@ public class SongController {
         Path userDir = Paths.get(UPLOAD_PATH, "user-" + user.getId());
         Files.createDirectories(userDir);
 
+        //create song folder
+        Path songDir = userDir.resolve(title);
+        Files.createDirectories(songDir);
+
         // save file
-        Path filePath = userDir.resolve(Objects.requireNonNull(file.getOriginalFilename()));
+        Path filePath = songDir.resolve(Objects.requireNonNull(file.getOriginalFilename()));
         file.transferTo(filePath.toFile());
 
         // save DB record
@@ -120,22 +128,18 @@ public class SongController {
 
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow();
+        Song song = songRepository.findByTitle(title);
+        if (song == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("error", "Song not found"));
+        }
 
-        // base folder for the user (already exists)
-        Path userDir = Paths.get(UPLOAD_PATH, "user-" + user.getId());
+        // base folder for the song (already exists)
+        Path songFilePath = Paths.get(song.getFilePath()).getParent();
 
-        // create "Stems" folder inside the user folder
-        Path stemsDir = userDir.resolve("Stems");
+        // create "Stems" folder inside the song folder
+        Path stemsDir = songFilePath.resolve("Stems");
         Files.createDirectories(stemsDir);
-
-        // sanitize title and artist to make valid folder name
-        String safeTitle = title.replaceAll("[^a-zA-Z0-9-_ ]", "_");
-        String safeArtist = artist.replaceAll("[^a-zA-Z0-9-_ ]", "_");
-
-        // create "title - artist" folder inside "Stems"
-        String songFolderName = safeTitle + " - " + safeArtist;
-        Path songDir = stemsDir.resolve(songFolderName);
-        Files.createDirectories(songDir);
 
         Map<String, StemType> stemMap = Map.of(
                 "vocals.wav", StemType.VOCALS,
@@ -151,11 +155,10 @@ public class SongController {
             if (file.isEmpty()) continue;
 
             String originalFileName = Objects.requireNonNull(file.getOriginalFilename()).toLowerCase();
-            StemType type = stemMap.getOrDefault(originalFileName, StemType.OTHER);
+            StemType type = stemMap.get(originalFileName);
 
-            Path filePath = songDir.resolve(file.getOriginalFilename());
+            Path filePath = stemsDir.resolve(file.getOriginalFilename());
             file.transferTo(filePath.toFile());
-            Song song = songRepository.findByTitle(title);
 
             Stem stem = new Stem();
             stem.setFilePath(filePath.toString());
@@ -171,5 +174,20 @@ public class SongController {
         res.put("message", "Stems uploaded successfully!");
 
         return ResponseEntity.ok(res);
+    }
+
+    @GetMapping("/stems/{songId}/{type}")
+    public ResponseEntity<Resource> getStem(
+            @PathVariable Long songId,
+            @PathVariable String type) throws IOException {
+
+        Stem stem = stemRepository.findBySongIdAndStemType(songId, StemType.valueOf(type.toUpperCase()));
+
+        Path path = Paths.get(stem.getFilePath());
+        Resource resource = new UrlResource(path.toUri());
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("audio/wav"))
+                .body(resource);
     }
 }

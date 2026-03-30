@@ -2,10 +2,11 @@ import {Component, computed, ElementRef, HostListener, OnInit, QueryList, ViewCh
 import { Song, TranscribingService } from '../services/transcribing.service';
 import { AudioPlayerService } from '../services/audio-player.service';
 import { FormsModule } from '@angular/forms';
+import {NgClass} from '@angular/common';
 
 @Component({
   selector: 'app-transcribing-page',
-  imports: [FormsModule],
+  imports: [FormsModule, NgClass],
   templateUrl: './transcribing-page.html',
   styleUrl: './transcribing-page.scss',
 })
@@ -32,16 +33,16 @@ export class TranscribingPage implements OnInit {
   private animationFrameId: number | null = null;
 
   ngOnInit() {
-    const animate = () => {
-      if (this.dragging !== 'playhead' && this.audioPlayer.isPlaying()) {
-        this.playheadPercent =
-          (this.audioPlayer.getCurrentPercent() ?? 0) * 100;
-      }
-
-      this.animationFrameId = requestAnimationFrame(animate);
-    };
-
-    animate();
+    // const animate = () => {
+    //   if (this.dragging !== 'playhead' && this.audioPlayer.isPlaying()) {
+    //     this.playheadPercent =
+    //       (this.audioPlayer.getCurrentPercent() ?? 0) * 100;
+    //   }
+    //
+    //   this.animationFrameId = requestAnimationFrame(animate);
+    // };
+    //
+    // animate();
   }
 
   // ------------------------
@@ -77,7 +78,7 @@ export class TranscribingPage implements OnInit {
 
     if (type === 'playhead') {
       this.playheadPercent = percent * 100;
-      this.audioPlayer.seek(percent);
+      // this.audioPlayer.seek(percent);
     }
   }
 
@@ -113,6 +114,23 @@ export class TranscribingPage implements OnInit {
     }
 
 }
+
+ enableStems(){
+    this.audioPlayer.enableStems()
+ }
+
+ toggleVocals(){
+    this.audioPlayer.stemPlayers['vocals'].mute = !this.audioPlayer.stemPlayers['vocals'].mute;
+ }
+ toggleDrums(){
+   this.audioPlayer.stemPlayers['drums'].mute = !this.audioPlayer.stemPlayers['drums'].mute;
+ }
+ toggleBass(){
+   this.audioPlayer.stemPlayers['bass'].mute = !this.audioPlayer.stemPlayers['bass'].mute;
+ }
+ toggleOther(){
+   this.audioPlayer.stemPlayers['other'].mute = !this.audioPlayer.stemPlayers['other'].mute;
+ }
 
   ngOnDestroy() {
     if (this.animationFrameId !== null) {

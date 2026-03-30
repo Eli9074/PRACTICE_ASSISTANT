@@ -1,18 +1,13 @@
 .background{
-  background: linear-gradient(135deg, #041d05, #357238);
+  background: linear-gradient(135deg, var(--color-brown), var(--color-light-brown));
   height: 100vh;
 }
+
 .card-container {
   width: 70vw;
   height: 90vh;
 
-  background:
-    linear-gradient(
-        180deg,
-        #ffffff 0%,
-        #f0f2f3 100%
-    ),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.045'/></svg>");
+  background-image:url("./TEST.png");
 
   border-radius: 20px;
   border: 1px solid rgba(0, 0, 0, 0.06);

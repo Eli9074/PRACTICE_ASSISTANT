@@ -4,4 +4,246 @@
 
 :root{
   --component-background: #090f0c;
+  --color-brown: #7F5539;
+  --color-light-brown: #A68A64;
+  --color-neutral: #EDE0D4;
+  --color-green: #656D4A;
+  --color-dark-green: #414833;
+
+  --color-dark-background: #0e0a1e;
+  --color-green-highlight: #00d796;
+  --color-pink-highlight: #f400b3;
 }
+
+.bg-dark{
+  background-color: var(--color-dark-background) !important;
+}
+.outer-container{
+  height: 100vh;
+  width: 100vw;
+}
+.card{
+  border: none;
+}
+
+.h-30{
+  height: 30%;
+}
+
+.h-40{
+  height: 40%;
+}
+
+.h-60{
+  height: 60%;
+}
+
+/* Card Base */
+.card-neon {
+  position: relative;
+
+  background: linear-gradient(
+      160deg,
+      rgba(55,35,90,0.55),
+      rgba(10,8,30,0.85)
+  );
+
+  border-radius: 18px;
+  padding: 1.5rem;
+  color: white;
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  /* clearer border */
+  border: 1px solid rgba(255,255,255,0.18);
+
+  transition: all 0.35s ease;
+
+  /* outer glow + inner glass */
+  box-shadow:
+    0 10px 40px rgba(0,0,0,0.6),
+    0 0 12px rgba(140,80,255,0.25),
+    inset 0 1px 1px rgba(255,255,255,0.15),
+    inset 0 0 12px rgba(255,255,255,0.05);
+}
+
+/* Liquid glass highlight */
+.card-neon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  border-radius: inherit;
+
+  background: linear-gradient(
+      120deg,
+      rgba(255,255,255,0.20),
+      rgba(255,255,255,0.02) 40%
+  );
+
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+
+.hover-neon-move:hover {
+  transform: translateY(-5px);
+
+  border-color: rgba(150,110,255,0.6);
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.8),
+    0 0 20px rgba(140,80,255,0.45),
+    0 0 45px rgba(80,200,255,0.25),
+    inset 0 1px 1px rgba(255,255,255,0.2);
+
+  cursor: pointer;
+}
+
+.hover-neon-highlight:hover {
+  border-color: rgba(150,110,255,0.6);
+
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.8),
+    0 0 20px rgba(140,80,255,0.45),
+    0 0 45px rgba(80,200,255,0.25),
+    inset 0 1px 1px rgba(255,255,255,0.2);
+}
+
+
+/* Titles */
+.card-neon .card-title {
+  font-weight: 600;
+  color: #f2efff;
+  letter-spacing: 0.3px;
+}
+
+/* Subtext */
+.card-neon .card-text {
+  color: rgba(255,255,255,0.7);
+}
+
+/* Accent bar */
+.card-neon-accent {
+  height: 3px;
+  width: 40px;
+
+  background: linear-gradient(
+      90deg,
+      #00ffe0,
+      #7b61ff,
+      #ff6ad5
+  );
+
+  border-radius: 10px;
+  margin-bottom: 10px;
+
+  box-shadow:
+    0 0 8px rgba(0,255,224,0.6),
+    0 0 12px rgba(123,97,255,0.5);
+}
+
+.btn-neon {
+  position: relative;
+
+  background: linear-gradient(
+      160deg,
+      rgba(55,35,90,0.55),
+      rgba(10,8,30,0.85)
+  );
+
+  border-radius: 14px;
+  padding: 0.55rem 1.2rem;
+  color: white;
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255,255,255,0.18);
+
+  transition: all 0.35s ease;
+
+  box-shadow:
+    0 6px 18px rgba(0,0,0,0.6),
+    0 0 10px rgba(140,80,255,0.25),
+    inset 0 1px 1px rgba(255,255,255,0.15),
+    inset 0 0 10px rgba(255,255,255,0.05);
+}
+
+/* highlight layer */
+.btn-neon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+
+  background: linear-gradient(
+      120deg,
+      rgba(255,255,255,0.2),
+      rgba(255,255,255,0.02) 40%
+  );
+
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+/* hover */
+.btn-neon:hover {
+  transform: translateY(-3px);
+
+  border-color: rgba(150,110,255,0.6);
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.7),
+    0 0 20px rgba(140,80,255,0.45),
+    0 0 35px rgba(80,200,255,0.25),
+    inset 0 1px 1px rgba(255,255,255,0.2);
+}
+
+/* click press */
+.btn-neon:active {
+  transform: translateY(0px) scale(0.97);
+}
+
+.input-neon {
+  background: linear-gradient(
+      160deg,
+      rgba(55,35,90,0.35),
+      rgba(10,8,30,0.75)
+  );
+
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.18);
+
+  color: white;
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  box-shadow:
+    inset 0 1px 1px rgba(255,255,255,0.1),
+    inset 0 0 8px rgba(255,255,255,0.05);
+
+  transition: all 0.25s ease;
+}
+
+/* focus glow */
+.input-neon:focus {
+  outline: none;
+
+  border-color: rgba(150,110,255,0.6);
+
+  box-shadow:
+    0 0 10px rgba(140,80,255,0.45),
+    inset 0 1px 1px rgba(255,255,255,0.2);
+}
+
+/* placeholder */
+.input-neon::placeholder {
+  color: rgba(255,255,255,0.45);
+}
+
+
+
+

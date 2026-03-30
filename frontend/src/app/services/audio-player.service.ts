@@ -1,103 +1,108 @@
 import { Injectable, signal } from '@angular/core';
-import { Song } from './transcribing.service';
+import {Song, TranscribingService} from './transcribing.service';
 import * as Tone from 'tone';
+import {SongDto} from '../model/SongDto';
+import {HttpClient} from '@angular/common/http';
 
 
 
 @Injectable({ providedIn: 'root' })
 export class AudioPlayerService {
 
+  private vocalFile: File = new File([new Blob()], "vocals.wav", { type: "audio/wav" });
+  private drumFile: File = new File([new Blob()], "drums.wav",  { type: "audio/wav" });
+  private bassFile: File = new File([new Blob()], "bass.wav",   { type: "audio/wav" });
+  private guitarFile: File = new File([new Blob()], "guitar.wav",  { type: "audio/wav" });
+  private otherFile: File = new File([new Blob()], "other.wav",  { type: "audio/wav" });
+  public isFirstTime: Boolean = true;
+
   private player: Tone.Player | null = null;
+  stemPlayers: { [key: string]: Tone.Player } = {};
 
-  private startTimestamp: number | null = null; // Tone.now() when playback started
-  private pausedPercent: number = 0; // 0 = start, 1 = end
-
+  areStemsReady = signal(false);
   isPlaying = signal(false);
   isLoading = signal(false);
-  currentTime = signal(0);
-  duration = signal(0);
   currentSong = signal<Song | null>(null);
-  speed = signal(1); // normal speed
-  private resumeOffset = 0;
+  currentSongId = signal<number | null>(null);
+  speed = signal(1);
+  areStemsEnabled = signal(false)
 
+  //This is used to reset the playback when it finishes
+  private _timeUpdateEventId: number | null = null;
 
-  private _timeUpdateInterval: any = null;
-
-  constructor() {}
+  constructor(private transcribingService: TranscribingService, private http: HttpClient) {}
 
   async loadSong(song: Song, audioUrl: string, restart: boolean) {
+    this.currentSong.set(song);
+    //Start stem pipeline right away
+    await this.stemPipelineHelper();
+
     await Tone.start();
 
-    this.currentSong.set(song);
-
-    // Stop previous player if exists
     if (this.player) {
-      // Stop only if it was started
-      if (this.isPlaying()) {
-        this.pause();
-        this.player.stop();
-      }
       this.player.dispose();
     }
 
     // Create new player with a load callback
-    this.player = new Tone.Player(audioUrl, () => {
-      // This callback fires once the audio buffer is fully loaded
-      this.duration.set(this.player?.buffer?.duration ?? 0);
-    }).toDestination();
+    this.player = new Tone.Player(audioUrl).toDestination();
 
-    // Wait for buffer to load by polling
-    await new Promise<void>((resolve) => {
-      const checkLoaded = () => {
-        if (this.player?.buffer?.loaded) {
-          resolve();
-        } else {
-          requestAnimationFrame(checkLoaded);
-        }
-      };
-      checkLoaded();
-    });
+    // Sync to Transport
+    this.player.sync().start(0);
 
+    // Reset Transport if restarting
+    setInterval(() => {
+      if (!this.player) return;
+      const elapsed = Tone.Transport.seconds;
+      if (elapsed >= this.player.buffer.duration) {
+        Tone.Transport.stop();
+        Tone.Transport.seconds = 0;
+        this.isPlaying.set(false);
+      }
+    }, 100);
 
-    this.player.toDestination();
-    if(restart){
-      // Reset playback tracking
-      this.startTimestamp = null;
-      this.pausedPercent = 0;           // reset percent
-      this.isPlaying.set(false);
-      this.currentTime.set(0);          // still bind scrubber to percent
+  }
+
+  async enableStems() {
+    // Make sure stems are loaded
+    if (!this.areStemsReady()) return;
+
+    // Mute the main mix player
+    if (this.player) {
+      this.player.mute = true;
     }
 
-    // Update currentTime signal periodically
-    if (this._timeUpdateInterval) clearInterval(this._timeUpdateInterval);
-    this._timeUpdateInterval = setInterval(() => {
-      if (!this.player || !this.player.buffer || !this.isPlaying()) return;
+    // Dispose previous stem players if any
+    if (this.stemPlayers) {
+      Object.values(this.stemPlayers).forEach(player => {
+        player.unsync?.();  // remove from Transport if it was synced
+        player.dispose();    // safely dispose
+      });
+      this.stemPlayers = {}; // clear the reference
+    }
+    this.stemPlayers = {};
 
-      const duration = this.player.buffer.duration;
-      if (!duration) return;
+    // Helper to create a player for a File or URL
+    const createStemPlayer = async (file: File, name: string) => {
+      if (!file) return;
 
-    // current progress in percent
-      let percent = this.pausedPercent;
-      if (this.startTimestamp !== null) {
-        percent += (Tone.now() - this.startTimestamp) / duration;
-      }
+      const url = URL.createObjectURL(file);
 
-    // Clamp to 0–1
-      percent = Math.min(percent, 1);
 
-    // End of track
-      if (percent >= 1) {
-        this.player.stop();
-        this.isPlaying.set(false);
-        this.currentTime.set(0);
-        this.pausedPercent = 0;
-        this.startTimestamp = null;
-        return;
-      }
+      const player = new Tone.Player(url, () => {
+        // Audio is fully loaded
+        player.sync().start(0);
+      }).toDestination();
 
-    // Update currentTime signal (0–1)
-      this.currentTime.set(percent);
-    }, 100);
+      this.stemPlayers[name] = player;
+    };
+
+    // Create players for each stem
+    await createStemPlayer(this.vocalFile, "vocals");
+    await createStemPlayer(this.drumFile, "drums");
+    await createStemPlayer(this.bassFile, "bass");
+    await createStemPlayer(this.otherFile, "other");
+
+    this.areStemsEnabled.set(true);
   }
 
   // ------------------------
@@ -105,67 +110,24 @@ export class AudioPlayerService {
   // ------------------------
   play() {
     if (!this.player) return;
-    if (this.isPlaying()) return;
-
-    const startTime = this.pausedPercent * this.player.buffer.duration;
-    this.startTimestamp = Tone.now();
-    this.player.start(undefined, startTime);
-    this.isPlaying.set(true);
-  }
-
-  pause() {
-    if (!this.player || !this.isPlaying()) return;
-
-    this.pausedPercent = this.getCurrentPercent();
-    this.player.stop();
-    this.startTimestamp = null;
-
-    // Update state
-    this.isPlaying.set(false);
-  }
-
-  restart() {
-    if (!this.player) return;
-
-    this.player.stop();
-    this.pausedPercent = 0;
-    this.startTimestamp = null;
-    this.isPlaying.set(false);
-    this.currentTime.set(0);
-    this.play();
-  }
-
-  seek(percent: number) {
-    if (!this.player) return;
-
-    const wasPlaying = this.isPlaying();
-    if (wasPlaying) this.player.stop();
-
-    // Update pausedPercent
-    this.pausedPercent = percent;
-
-    // Reset startTimestamp for interval calculations
-    if (wasPlaying) {
-      this.startTimestamp = Tone.now();
-      const startTime = this.pausedPercent * this.player.buffer!.duration;
-      this.player.start(undefined, startTime);
-    } else {
-      this.startTimestamp = null;
+    // Start Transport only if it’s not already started
+    if (Tone.Transport.state !== "started") {
+      Tone.Transport.start();
     }
   }
 
+  pause() {
+    // Pause Transport without stopping players
+    if (Tone.Transport.state === "started") {
+      Tone.Transport.pause();
+    }
+  }
 
-  // ------------------------
-  // Helpers
-  // ------------------------
-  getCurrentPercent(): number {
-    if (!this.player || !this.player.buffer) return this.pausedPercent;
-
-    const duration = this.player.buffer.duration;
-    if (!this.isPlaying() || this.startTimestamp === null) return this.pausedPercent;
-
-    const elapsedSeconds = Tone.now() - this.startTimestamp;
-    return Math.min(this.pausedPercent + elapsedSeconds / duration, 1);
+  restart() {
+    this.pause();
+    Tone.Transport.stop();
+    Tone.Transport.seconds = 0;
+    this.play()
   }
 
   async stretchAndLoadSong( speed: number) {
@@ -202,6 +164,127 @@ export class AudioPlayerService {
       this.isLoading.set(false);
     }
   }
+
+  async createStems(){
+    const song = this.currentSong();
+    if (!song) return;
+
+    const file: File = (song as any).file;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      // Call the FastAPI endpoint
+      const res = await fetch("http://localhost:8000/separate", {
+        method: "POST",
+        body: formData
+      });
+
+      // Parse JSON with the 4 URLs
+      const stems: { [key: string]: string } = await res.json();
+
+      // Helper to fetch URL and convert to File
+      const fetchFile = async (url: string, filename: string) => {
+        const blob = await fetch(url).then(r => r.blob());
+        return new File([blob], filename, { type: "audio/wav" });
+      };
+
+      // Fill your variables
+      this.vocalFile = await fetchFile(stems["vocals"], "vocals.wav");
+      this.drumFile  = await fetchFile(stems["drums"],  "drums.wav");
+      this.bassFile  = await fetchFile(stems["bass"],   "bass.wav");
+      this.otherFile = await fetchFile(stems["other"],  "other.wav");
+
+      console.log("Files set in service:", {
+        vocalFile: this.vocalFile,
+        drumFile: this.drumFile,
+        bassFile: this.bassFile,
+        otherFile: this.otherFile
+      });
+
+      this.areStemsReady.set(true);
+
+      await this.saveStems()
+
+    } catch (err) {
+      console.error("Error separating audio:", err);
+    }
+
+  }
+
+  async saveStems(){
+    const formData = new FormData();
+    const song = this.currentSong();
+    if (!song) {
+      console.error("No song selected!");
+      return;
+    }
+
+    formData.append("title", song.title);
+    formData.append("artist", song.artist);
+    formData.append("files", this.vocalFile);
+    formData.append("files", this.drumFile);
+    formData.append("files", this.bassFile);
+    formData.append("files", this.otherFile);
+
+    try{
+       await this.transcribingService.saveStems(formData);
+    }
+    catch (error) {
+      console.error("Network error:", error);
+    }
+  }
+
+  async loadStems() {
+    const songId = this.currentSongId();
+    try {
+
+      const getStemFile = async (type: string, filename: string) => {
+        const blob = await this.http
+          .get(`/api/songs/stems/${songId}/${type}`, { responseType: 'blob' })
+          .toPromise();
+
+        return new File([blob!], filename, { type: "audio/wav" });
+      };
+
+      this.vocalFile = await getStemFile("vocals", "vocals.wav");
+      this.drumFile  = await getStemFile("drums",  "drums.wav");
+      this.bassFile  = await getStemFile("bass",   "bass.wav");
+      this.otherFile = await getStemFile("other",  "other.wav");
+
+      console.log("Stems loaded successfully");
+
+      this.areStemsReady.set(true);
+
+    } catch (err) {
+      console.error("Error loading stems:", err);
+      throw err;
+    }
+  }
+
+  async stemPipelineHelper(){
+    if(this.isFirstTime){
+      this.createStems()
+        .then(() => {
+
+        })
+        .catch(err => {
+          console.error("Failed to create stems:", err);
+        });
+    }
+    else {
+      this.loadStems()
+        .then(() => {
+
+        })
+        .catch(err => {
+          console.error("Failed to load stems:", err);
+        });
+    }
+
+  }
+
+
 
 
 

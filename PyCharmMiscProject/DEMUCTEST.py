@@ -97,41 +97,41 @@ async def separate_audio_regular(
     )
 
 
-@app.post("/separate_6")
-async def separate_audio_6(
-    file: UploadFile = File(...),
-    stems: str = Form(...)  # e.g. "vocals,drums,guitar"
-):
-    requested_stems = {s.strip() for s in stems.split(",")}
-    invalid_stems = requested_stems - SIX_STEMS
-    if invalid_stems:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid stems requested: {', '.join(invalid_stems)}"
-        )
-
-    input_path, input_id = save_uploaded_file(file)
-
-    # Run 6-stem model
-    try:
-        subprocess.run(
-            ["demucs", "-n", "htdemucs_6s", "-o", OUTPUT_DIR, input_path],
-            check=True
-        )
-    except subprocess.CalledProcessError:
-        raise HTTPException(status_code=500, detail="Demucs failed")
-
-    song_name = os.path.splitext(os.path.basename(input_path))[0]
-    song_dir = os.path.join(OUTPUT_DIR, "htdemucs_6s", song_name)
-
-    if not os.path.isdir(song_dir):
-        raise HTTPException(status_code=500, detail="Demucs output not found")
-
-    zip_path = os.path.join(TEMP_DIR, f"stems_{input_id}.zip")
-    zip_stems(requested_stems, song_dir, zip_path)
-
-    return FileResponse(
-        zip_path,
-        media_type="application/zip",
-        filename="stems.zip"
-    )
+# @app.post("/separate_6")
+# async def separate_audio_6(
+#     file: UploadFile = File(...),
+#     stems: str = Form(...)  # e.g. "vocals,drums,guitar"
+# ):
+#     requested_stems = {s.strip() for s in stems.split(",")}
+#     invalid_stems = requested_stems - SIX_STEMS
+#     if invalid_stems:
+#         raise HTTPException(
+#             status_code=400,
+#             detail=f"Invalid stems requested: {', '.join(invalid_stems)}"
+#         )
+#
+#     input_path, input_id = save_uploaded_file(file)
+#
+#     # Run 6-stem model
+#     try:
+#         subprocess.run(
+#             ["demucs", "-n", "htdemucs_6s", "-o", OUTPUT_DIR, input_path],
+#             check=True
+#         )
+#     except subprocess.CalledProcessError:
+#         raise HTTPException(status_code=500, detail="Demucs failed")
+#
+#     song_name = os.path.splitext(os.path.basename(input_path))[0]
+#     song_dir = os.path.join(OUTPUT_DIR, "htdemucs_6s", song_name)
+#
+#     if not os.path.isdir(song_dir):
+#         raise HTTPException(status_code=500, detail="Demucs output not found")
+#
+#     zip_path = os.path.join(TEMP_DIR, f"stems_{input_id}.zip")
+#     zip_stems(requested_stems, song_dir, zip_path)
+#
+#     return FileResponse(
+#         zip_path,
+#         media_type="application/zip",
+#         filename="stems.zip"
+#     )

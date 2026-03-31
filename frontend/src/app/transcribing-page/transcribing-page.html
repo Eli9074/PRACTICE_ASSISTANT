@@ -54,8 +54,8 @@
 
           <button class="btn btn-neon"
                   [disabled]="!audioPlayer.areStemsReady()"
-                  (click)="enableStems()">
-            Enable
+                  (click)="audioPlayer.areStemsEnabled() ? audioPlayer.toggleBackToMain() : audioPlayer.toggleStems(true)">
+            {{ audioPlayer.areStemsEnabled() ? 'Back to Mix' : 'Enable Stems' }}
           </button>
 
           <button class="btn btn-neon"

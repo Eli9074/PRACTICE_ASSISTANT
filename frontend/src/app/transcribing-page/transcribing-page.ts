@@ -105,9 +105,7 @@ export class TranscribingPage implements OnInit {
     }
 
     try {
-      this.audioPlayer.pause();
       await this.audioPlayer.changePlaybackSpeed(speed);
-      this.audioPlayer.play(); // automatically play after stretching
     } catch (err) {
       console.error(err);
       alert("Failed to stretch audio. Make sure a song is loaded.");
@@ -115,22 +113,11 @@ export class TranscribingPage implements OnInit {
 
 }
 
- enableStems(){
-    this.audioPlayer.toggleStems();
- }
 
- toggleVocals(){
-    this.audioPlayer.stemPlayers['vocals'].mute = !this.audioPlayer.stemPlayers['vocals'].mute;
- }
- toggleDrums(){
-   this.audioPlayer.stemPlayers['drums'].mute = !this.audioPlayer.stemPlayers['drums'].mute;
- }
- toggleBass(){
-   this.audioPlayer.stemPlayers['bass'].mute = !this.audioPlayer.stemPlayers['bass'].mute;
- }
- toggleOther(){
-   this.audioPlayer.stemPlayers['other'].mute = !this.audioPlayer.stemPlayers['other'].mute;
- }
+  toggleVocals() { this.audioPlayer.toggleStemMute('vocals'); }
+  toggleDrums()  { this.audioPlayer.toggleStemMute('drums');  }
+  toggleBass()   { this.audioPlayer.toggleStemMute('bass');   }
+  toggleOther()  { this.audioPlayer.toggleStemMute('other');  }
 
   ngOnDestroy() {
     if (this.animationFrameId !== null) {

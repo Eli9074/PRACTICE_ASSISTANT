@@ -3,6 +3,7 @@ import { Song, TranscribingService } from '../services/transcribing.service';
 import { AudioPlayerService } from '../services/audio-player.service';
 import { FormsModule } from '@angular/forms';
 import {NgClass} from '@angular/common';
+import {Tone} from 'tone/build/esm/core/Tone';
 
 @Component({
   selector: 'app-transcribing-page',
@@ -12,88 +13,19 @@ import {NgClass} from '@angular/common';
 })
 export class TranscribingPage implements OnInit {
 
-  @ViewChild('playheadScrubber', { static: true })
-  playheadScrubber!: ElementRef<HTMLDivElement>;
-
-  @ViewChild('speedScrubber', { static: true })
-  speedScrubber!: ElementRef<HTMLDivElement>;
-
-
-  playheadPercent = 0;   // audio position
-  speedPercent = 50;    // centered = normal speed
-  dragging: 'playhead' | 'speed' | null = null;
-
-  currentSong = computed(() => this.transcribingService.currentSong());
+  private isScrubbing = false;
+  loopStartInput = '';
+  loopEndInput = '';
+  private dragging: 'scrub' | 'loopStart' | 'loopEnd' | null = null;
+  private readonly MARKER_THRESHOLD = 0.02;
 
   constructor(
     private transcribingService: TranscribingService,
     public audioPlayer: AudioPlayerService,
   ) {}
 
-  private animationFrameId: number | null = null;
-
   ngOnInit() {
-    // const animate = () => {
-    //   if (this.dragging !== 'playhead' && this.audioPlayer.isPlaying()) {
-    //     this.playheadPercent =
-    //       (this.audioPlayer.getCurrentPercent() ?? 0) * 100;
-    //   }
-    //
-    //   this.animationFrameId = requestAnimationFrame(animate);
-    // };
-    //
-    // animate();
-  }
 
-  // ------------------------
-  // Scrubber Dragging
-  // ------------------------
-  startDrag(type: 'playhead' | 'speed', event: MouseEvent) {
-    this.dragging = type;
-    this.updateFromEvent(type, event);
-  }
-
-  @HostListener('document:mousemove', ['$event'])
-  onDrag(event: MouseEvent) {
-    if (!this.dragging) return;
-    this.updateFromEvent(this.dragging, event);
-  }
-
-  @HostListener('document:mouseup')
-  stopDrag() {
-    this.dragging = null;
-  }
-
-
-  private updateFromEvent(type: 'playhead' | 'speed', event: MouseEvent) {
-    const el = type === 'playhead'
-      ? this.playheadScrubber.nativeElement
-      : this.speedScrubber.nativeElement;
-
-    const rect = el.getBoundingClientRect();
-    const percent = Math.min(
-      Math.max((event.clientX - rect.left) / rect.width, 0),
-      1
-    );
-
-    if (type === 'playhead') {
-      this.playheadPercent = percent * 100;
-      // this.audioPlayer.seek(percent);
-    }
-  }
-
-
-
-
-  // ------------------------
-  // Click-to-seek
-  // ------------------------
-  seekTimeline(event: MouseEvent) {
-    this.updateFromEvent('playhead', event);
-  }
-
-  seekSpeed(event: MouseEvent) {
-    this.updateFromEvent('speed', event);
   }
 
   async onStretchEnter(value: string){
@@ -113,15 +45,111 @@ export class TranscribingPage implements OnInit {
 
 }
 
-
   toggleVocals() { this.audioPlayer.toggleStemMute('vocals'); }
   toggleDrums()  { this.audioPlayer.toggleStemMute('drums');  }
   toggleBass()   { this.audioPlayer.toggleStemMute('bass');   }
   toggleOther()  { this.audioPlayer.toggleStemMute('other');  }
 
-  ngOnDestroy() {
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
+  //SEEK CONTROLS
+
+  // transcribing-page.ts
+  seek(event: MouseEvent) {
+    const track = event.currentTarget as HTMLElement;
+    const rect = track.getBoundingClientRect();
+    const percentage = (event.clientX - rect.left) / rect.width;
+    this.audioPlayer.seek(percentage);
+  }
+
+  onScrubStart(event: MouseEvent) {
+    const track = event.currentTarget as HTMLElement;
+    const rect = track.getBoundingClientRect();
+    const percentage = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+
+    if (this.audioPlayer.isLooping()) {
+      const startPct = this.audioPlayer.loopStart() / this.audioPlayer.duration;
+      const endPct = this.audioPlayer.loopEnd() / this.audioPlayer.duration;
+
+      if (Math.abs(percentage - startPct) < this.MARKER_THRESHOLD) {
+        this.dragging = 'loopStart';
+        return;
+      }
+      if (Math.abs(percentage - endPct) < this.MARKER_THRESHOLD) {
+        this.dragging = 'loopEnd';
+        return;
+      }
     }
+
+    this.dragging = 'scrub';
+    this.scrubTo(event);
+  }
+
+  onScrubMove(event: MouseEvent) {
+    if (!this.dragging) return;
+    const track = event.currentTarget as HTMLElement;
+    const rect = track.getBoundingClientRect();
+    const percentage = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+    const seconds = percentage * this.audioPlayer.duration;
+
+    if (this.dragging === 'loopStart') {
+      if (seconds < this.audioPlayer.loopEnd()) {
+        this.audioPlayer.setLoop(seconds, this.audioPlayer.loopEnd());
+        this.loopStartInput = this.formatTime(seconds);
+      }
+    } else if (this.dragging === 'loopEnd') {
+      if (seconds > this.audioPlayer.loopStart()) {
+        this.audioPlayer.setLoop(this.audioPlayer.loopStart(), seconds);
+        this.loopEndInput = this.formatTime(seconds);
+      }
+    } else {
+      this.scrubTo(event);
+    }
+  }
+
+  onScrubEnd() {
+    this.dragging = null;
+    this.isScrubbing = false;
+  }
+
+  private scrubTo(event: MouseEvent) {
+    const track = event.currentTarget as HTMLElement;
+    const rect = track.getBoundingClientRect();
+    const percentage = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+    this.audioPlayer.seek(percentage);
+  }
+
+  //LOOPING CONTROLS
+  parseTime(value: string): number | null {
+    const parts = value.trim().split(':');
+    if (parts.length === 2) {
+      const minutes = parseInt(parts[0], 10);
+      const seconds = parseFloat(parts[1]);
+      if (!isNaN(minutes) && !isNaN(seconds)) {
+        return minutes * 60 + seconds;
+      }
+    }
+    return null;
+  }
+
+  onLoopInputChange() {
+    const start = this.parseTime(this.loopStartInput);
+    const end = this.parseTime(this.loopEndInput);
+    if (start === null || end === null || end <= start) return;
+    this.audioPlayer.setLoop(start, end);
+  }
+
+  toggleLoop() {
+    this.audioPlayer.toggleLoop();
+  }
+
+  formatTime(seconds: number): string {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+
+
+
+  ngOnDestroy() {
   }
 }

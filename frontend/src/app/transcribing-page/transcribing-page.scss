@@ -27,94 +27,64 @@
 .scrubber {
   position: relative;
   height: 6px;
-  background: #444;
+  background: rgba(255, 255, 255, 0.08);
   border-radius: 3px;
   cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.4),
+    0 0 6px rgba(140, 80, 255, 0.15);
 }
 
 .scrubber-fill {
   position: absolute;
   height: 100%;
-  background: #0d6efd;
+  background: linear-gradient(
+      90deg,
+      rgba(140, 80, 255, 0.9),
+      rgba(80, 200, 255, 0.9)
+  );
   border-radius: 3px;
+  box-shadow: 0 0 8px rgba(140, 80, 255, 0.6);
 }
-
 
 .scrubber-thumb {
   position: absolute;
   top: 50%;
   width: 14px;
   height: 14px;
-  background: #0d6efd;
+  background: white;
   border-radius: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
   transition: left 0.05s linear;
+  box-shadow:
+    0 0 8px rgba(140, 80, 255, 0.8),
+    0 0 16px rgba(80, 200, 255, 0.4);
 }
 
-.loop-overlay {
+.loop-region {
   position: absolute;
   top: 0;
   height: 100%;
-  background: rgba(13, 110, 253, 0.35); /* bootstrap primary w/ transparency */
-  backdrop-filter: blur(4px) saturate(150%);
-  -webkit-backdrop-filter: blur(4px) saturate(150%);
-  border-radius: 3px;
+  background: rgba(80, 200, 255, 0.15);
+  border-top: 1px solid rgba(80, 200, 255, 0.3);
+  border-bottom: 1px solid rgba(80, 200, 255, 0.3);
   pointer-events: none;
-  z-index: 1;
 }
 
-/* Optional: subtle edge definition */
-.loop-overlay::before,
-.loop-overlay::after {
-  content: '';
-  position: absolute;
-  top: -4px;
-  width: 2px;
-  height: 14px;
-  background: #0d6efd;
-  border-radius: 1px;
-}
-
-.loop-overlay::before {
-  left: 0;
-}
-
-.loop-overlay::after {
-  right: 0;
-}
-
-@keyframes loopGlow {
-  0%   { opacity: 0.8; }
-  50%  { opacity: 1; }
-  100% { opacity: 0.8; }
-}
-
-.loop-overlay {
-  animation: loopGlow 2.5s ease-in-out infinite;
-}
-
-.loop-handle {
+.loop-marker {
   position: absolute;
   top: 50%;
-  width: 10px;
-  height: 22px;
-  background: #0d6efd;
-  border-radius: 3px;
   transform: translate(-50%, -50%);
+  width: 3px;
+  height: 16px;
+  background: #50c8ff;
+  border-radius: 2px;
   cursor: ew-resize;
-  z-index: 4;
-  box-shadow: 0 0 6px rgba(13, 110, 253, 0.6);
-}
-
-.loop-handle.start {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-}
-
-.loop-handle.end {
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
+  box-shadow:
+    0 0 6px rgba(80, 200, 255, 0.9),
+    0 0 12px rgba(80, 200, 255, 0.4);
 }
 
 .loading-overlay {

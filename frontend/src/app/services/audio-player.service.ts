@@ -27,7 +27,7 @@ export class AudioPlayerService {
   otherFilePath: string | undefined;
   public isFirstTime: Boolean = true;
 
-  private player: Tone.Player | null = null;
+  public player: Tone.Player | null = null;
   stemPlayers: { [key: string]: Tone.Player } = {};
 
   stemMuteState: { [key: string]: boolean } = {
@@ -45,11 +45,21 @@ export class AudioPlayerService {
   originalSong = signal<Song | null>(null)
   currentSpeed = signal(1);
   areStemsEnabled = signal(false)
+  //scrubber signal
+  currentPosition = signal(0);
+  //looping signals
+  isLooping = signal(false);
+  loopStart = signal(0);  // in seconds
+  loopEnd = signal(0);    // in seconds
 
   //This is used to reset the playback when it finishes
   private _timeUpdateEventId: number | null = null;
 
   constructor(private transcribingService: TranscribingService, private http: HttpClient) {}
+
+  get duration(): number {
+    return this.player?.buffer?.duration ?? 0;
+  }
 
   async loadSong(song: Song, stemLoad: boolean, stretchLoad: boolean, initialLoad: boolean) {
     if(initialLoad){
@@ -83,9 +93,21 @@ export class AudioPlayerService {
     setInterval(() => {
       if (!this.player) return;
       const elapsed = Tone.Transport.seconds;
-      if (elapsed >= this.player.buffer.duration) {
+      const duration = this.player.buffer.duration;
+
+      // Update progress
+      this.currentPosition.set(elapsed / duration);
+
+      // Loop check
+      if (this.isLooping() && this.loopEnd() > 0 && elapsed >= this.loopEnd()) {
+        Tone.Transport.seconds = this.loopStart();
+        return;
+      }
+
+      if (elapsed >= duration) {
         Tone.Transport.stop();
         Tone.Transport.seconds = 0;
+        this.currentPosition.set(0);
         this.isPlaying.set(false);
       }
     }, 100);
@@ -413,9 +435,33 @@ export class AudioPlayerService {
     }
   }
 
+  //SEEK CONTROLS
+  seek(percentage: number) {
+    const duration = this.player?.buffer?.duration;
+    if (!duration) return;
 
+    let seconds = percentage * duration;
 
+    if (this.isLooping() && this.loopEnd() > 0) {
+      seconds = Math.min(Math.max(seconds, this.loopStart()), this.loopEnd());
+    }
 
+    Tone.Transport.seconds = seconds;
+    this.currentPosition.set(seconds / duration);
+  }
 
+  //LOOPING CONTROLS
+  setLoop(start: number, end: number) {
+    this.loopStart.set(start);
+    this.loopEnd.set(end);
+  }
+
+  toggleLoop() {
+    const newState = !this.isLooping();
+    this.isLooping.set(newState);
+    if (newState && this.loopStart() > 0) {
+      Tone.Transport.seconds = this.loopStart();
+    }
+  }
 
 }

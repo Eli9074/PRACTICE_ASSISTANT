@@ -17,20 +17,38 @@
         </h3>
       }
 
-      <!-- Main Scrubber -->
-      <div class="scrubber-wrapper px-5 py-3">
-        <div #playheadScrubber
-             class="scrubber"
-             (mousedown)="startDrag('playhead', $event)"
-             (click)="seekTimeline($event)">
+      <!-- Scrubber -->
+      <div class="scrubber"
+           (mousedown)="onScrubStart($event)"
+           (mousemove)="onScrubMove($event)"
+           (mouseup)="onScrubEnd()"
+           (mouseleave)="onScrubEnd()">
 
-          <div class="scrubber-fill"
-               [style.left.%]="0"
-               [style.width.%]="playheadPercent">
+        <div class="scrubber-fill"
+             [style.width.%]="audioPlayer.currentPosition() * 100">
+        </div>
+
+        <!-- Loop region highlight -->
+        @if(audioPlayer.isLooping() && audioPlayer.loopEnd() > 0) {
+          <div class="loop-region" [style.left.%]="(audioPlayer.loopStart() / audioPlayer.duration) * 100"
+               [style.width.%]="((audioPlayer.loopEnd() - audioPlayer.loopStart()) / audioPlayer.duration) * 100">
           </div>
 
-          <div class="scrubber-thumb" [style.left.%]="playheadPercent"></div>
+          <!-- Loop start marker -->
+          <div class="loop-marker loop-marker-start"
+               [style.left.%]="(audioPlayer.loopStart() / audioPlayer.duration) * 100">
+          </div>
+
+          <!-- Loop end marker -->
+          <div class="loop-marker loop-marker-end"
+               [style.left.%]="(audioPlayer.loopEnd() / audioPlayer.duration) * 100">
+          </div>
+        }
+
+        <div class="scrubber-thumb"
+             [style.left.%]="audioPlayer.currentPosition() * 100">
         </div>
+
       </div>
 
       <!-- Audio Controls -->
@@ -97,29 +115,33 @@
       <!-- Looping -->
       <div class="d-flex flex-50 p-3">
         <div class="card-neon flex-grow-1">
-
           <div class="d-flex align-items-center justify-content-between mb-3">
             <h3 class="mb-0">Looping</h3>
-
             <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" id="loopingEnabled"/>
+              <input class="form-check-input" type="checkbox" id="loopingEnabled"
+                     [checked]="audioPlayer.isLooping()"
+                     (change)="toggleLoop()"/>
             </div>
           </div>
 
           <div class="d-flex flex-column gap-4">
-
             <div>
               <h5 class="text-center">Start</h5>
-              <input type="text" class="input-neon w-100">
+              <input type="text" class="input-neon w-100"
+                     placeholder="0:00"
+                     [(ngModel)]="loopStartInput"
+                     (blur)="onLoopInputChange()"
+                     (keydown.enter)="onLoopInputChange()"/>
             </div>
-
             <div>
               <h5 class="text-center">Stop</h5>
-              <input type="text" class="input-neon w-100">
+              <input type="text" class="input-neon w-100"
+                     placeholder="0:00"
+                     [(ngModel)]="loopEndInput"
+                     (blur)="onLoopInputChange()"
+                     (keydown.enter)="onLoopInputChange()"/>
             </div>
-
           </div>
-
         </div>
       </div>
 

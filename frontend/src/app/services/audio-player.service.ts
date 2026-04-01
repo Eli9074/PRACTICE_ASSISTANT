@@ -51,6 +51,8 @@ export class AudioPlayerService {
   isLooping = signal(false);
   loopStart = signal(0);  // in seconds
   loopEnd = signal(0);    // in seconds
+  private loopStartRatio = 0;
+  private loopEndRatio = 0;
 
   //This is used to reset the playback when it finishes
   private _timeUpdateEventId: number | null = null;
@@ -254,7 +256,10 @@ export class AudioPlayerService {
     this.currentSpeed.set(speed);
     if (!backgroundLoad) {
       await this.bothLoad(songToLoad, true);
-      Tone.Transport.seconds = currentPosition;
+      this.reapplyLoop();
+      Tone.Transport.seconds = this.isLooping()
+        ? this.loopStartRatio * this.duration
+        : currentPosition;
       if (wasPlaying) this.play();
       this.isLoading.set(false);
     }
@@ -283,9 +288,12 @@ export class AudioPlayerService {
     const songToLoad = { ...song, file: stretchedFile };
 
     this.currentSpeed.set(speed);
-    await this.loadSong(songToLoad, false, true, false);
 
-    Tone.Transport.seconds = currentPosition;
+    await this.loadSong(songToLoad, false, true, false);
+    this.reapplyLoop();
+    Tone.Transport.seconds = this.isLooping()
+      ? this.loopStartRatio * this.duration
+      : currentPosition;
     if (wasPlaying) this.play();
     this.isLoading.set(false);
   }
@@ -452,8 +460,24 @@ export class AudioPlayerService {
 
   //LOOPING CONTROLS
   setLoop(start: number, end: number) {
-    this.loopStart.set(start);
-    this.loopEnd.set(end);
+    const duration = this.duration;
+    const clampedStart = Math.max(0, start);
+    const clampedEnd = Math.min(end, duration);
+
+    this.loopStart.set(clampedStart);
+    this.loopEnd.set(clampedEnd);
+
+    if (duration > 0) {
+      this.loopStartRatio = clampedStart / duration;
+      this.loopEndRatio = clampedEnd / duration;
+    }
+  }
+
+  reapplyLoop() {
+    if (!this.isLooping() || this.loopEndRatio === 0) return;
+    const duration = this.duration;
+    this.loopStart.set(this.loopStartRatio * duration);
+    this.loopEnd.set(this.loopEndRatio * duration);
   }
 
   toggleLoop() {

@@ -28,9 +28,8 @@ export class TranscribingPage implements OnInit {
 
   }
 
-  async onStretchEnter(value: string){
+  async onStretchEnter(value: string) {
     const speed = parseFloat(value);
-
     if (isNaN(speed) || speed <= 0) {
       alert("Please enter a valid speed greater than 0");
       return;
@@ -38,12 +37,15 @@ export class TranscribingPage implements OnInit {
 
     try {
       await this.audioPlayer.changePlaybackSpeed(speed);
+      if (this.audioPlayer.isLooping()) {
+        this.loopStartInput = this.formatTime(this.audioPlayer.loopStart());
+        this.loopEndInput = this.formatTime(this.audioPlayer.loopEnd());
+      }
     } catch (err) {
       console.error(err);
       alert("Failed to stretch audio. Make sure a song is loaded.");
     }
-
-}
+  }
 
   toggleVocals() { this.audioPlayer.toggleStemMute('vocals'); }
   toggleDrums()  { this.audioPlayer.toggleStemMute('drums');  }
@@ -134,7 +136,12 @@ export class TranscribingPage implements OnInit {
     const start = this.parseTime(this.loopStartInput);
     const end = this.parseTime(this.loopEndInput);
     if (start === null || end === null || end <= start) return;
+
     this.audioPlayer.setLoop(start, end);
+
+    // Reflect clamped values back into inputs
+    this.loopStartInput = this.formatTime(this.audioPlayer.loopStart());
+    this.loopEndInput = this.formatTime(this.audioPlayer.loopEnd());
   }
 
   toggleLoop() {

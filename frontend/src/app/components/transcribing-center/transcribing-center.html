@@ -18,7 +18,7 @@
             </button>
 
             <div class="text-truncate">
-              Selected file: {{ selectedFile?.name || 'None' }}
+              Selected file: {{ truncatedFileName }}
             </div>
           </div>
 
@@ -29,6 +29,7 @@
               name="songName"
               placeholder="Enter song name"
               [(ngModel)]="title"
+              maxlength="30"
               required
             >
           </div>
@@ -40,6 +41,7 @@
               name="artist"
               placeholder="Enter artist name"
               [(ngModel)]="artist"
+              maxlength="30"
               required
             >
           </div>

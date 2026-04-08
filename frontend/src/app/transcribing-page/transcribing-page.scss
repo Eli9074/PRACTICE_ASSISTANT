@@ -116,6 +116,25 @@
   opacity: 0.5;
 }
 
+.form-check-input[type="checkbox"] {
+  background-color: rgba(55, 35, 90, 0.6);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 0 6px rgba(140, 80, 255, 0.2);
+
+  &:checked {
+    background-color: rgba(140, 80, 255, 0.7);
+    border-color: rgba(150, 110, 255, 0.6);
+    box-shadow:
+      0 0 8px rgba(140, 80, 255, 0.6),
+      0 0 16px rgba(80, 200, 255, 0.3);
+  }
+
+  &:focus {
+    border-color: rgba(150, 110, 255, 0.6);
+    box-shadow: 0 0 10px rgba(140, 80, 255, 0.45);
+  }
+}
+
 .stem-loading-track {
   height: 6px;
   background: rgba(255, 255, 255, 0.08);

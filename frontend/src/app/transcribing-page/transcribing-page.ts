@@ -25,7 +25,23 @@ export class TranscribingPage implements OnInit {
   ) {}
 
   ngOnInit() {
-
+    if (!this.audioPlayer.currentSong()) {
+      const storedId = sessionStorage.getItem('currentSongId');
+      if (storedId) {
+        const songId = parseInt(storedId);
+        this.transcribingService.getFileFromSong(songId).subscribe(res => {
+          const audioBlob = res.body!;
+          const title = res.headers.get('X-Song-Title') ?? '';
+          const artist = res.headers.get('X-Song-Artist') ?? '';
+          const file = new File([audioBlob], `${title}.mp3`, { type: 'audio/mpeg' });
+          const song: Song = { file, title, artist };
+          this.transcribingService.setCurrentSong(song);
+          this.audioPlayer.currentSongId.set(songId);
+          this.audioPlayer.isFirstTime = false;
+          this.audioPlayer.loadSong(song, true, false, true);
+        });
+      }
+    }
   }
 
   async onStretchEnter(value: string) {
@@ -126,10 +142,23 @@ export class TranscribingPage implements OnInit {
       const minutes = parseInt(parts[0], 10);
       const seconds = parseFloat(parts[1]);
       if (!isNaN(minutes) && !isNaN(seconds)) {
-        return minutes * 60 + seconds;
+        return parseFloat((minutes * 60 + seconds).toFixed(1));
       }
     }
     return null;
+  }
+
+  adjustLoop(target: 'start' | 'end', delta: number) {
+    const current = target === 'start'
+      ? this.parseTime(this.loopStartInput) ?? this.audioPlayer.loopStart()
+      : this.parseTime(this.loopEndInput)   ?? this.audioPlayer.loopEnd();
+    const adjusted = Math.max(0, parseFloat((current + delta).toFixed(1)));
+    if (target === 'start') {
+      this.loopStartInput = this.formatTime(adjusted);
+    } else {
+      this.loopEndInput = this.formatTime(adjusted);
+    }
+    this.onLoopInputChange();
   }
 
   onLoopInputChange() {
@@ -150,7 +179,7 @@ export class TranscribingPage implements OnInit {
 
   formatTime(seconds: number): string {
     const m = Math.floor(seconds / 60);
-    const s = Math.floor(seconds % 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toFixed(1).padStart(4, '0');
     return `${m}:${s}`;
   }
 

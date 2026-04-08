@@ -22,6 +22,12 @@ export class TranscribingCenter{
 
 
 
+  get truncatedFileName(): string {
+    const name = this.selectedFile?.name;
+    if (!name) return 'None';
+    return name.length > 10 ? name.slice(0, 10) + '...' : name;
+  }
+
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     if (input.files && input.files.length > 0) {

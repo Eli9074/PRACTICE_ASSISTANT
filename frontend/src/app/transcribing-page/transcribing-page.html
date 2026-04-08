@@ -141,19 +141,31 @@
           <div class="d-flex flex-column gap-4">
             <div>
               <h5 class="text-center">Start</h5>
-              <input type="text" class="input-neon w-100"
-                     placeholder="0:00"
-                     [(ngModel)]="loopStartInput"
-                     (blur)="onLoopInputChange()"
-                     (keydown.enter)="onLoopInputChange()"/>
+              <div class="d-flex align-items-center gap-1">
+                <input type="text" class="input-neon flex-grow-1"
+                       placeholder="0:00"
+                       [(ngModel)]="loopStartInput"
+                       (blur)="onLoopInputChange()"
+                       (keydown.enter)="onLoopInputChange()"/>
+                <div class="d-flex flex-column gap-1">
+                  <button class="btn btn-neon py-0 px-2" style="font-size:0.7rem;" (click)="adjustLoop('start', 0.1)">▲</button>
+                  <button class="btn btn-neon py-0 px-2" style="font-size:0.7rem;" (click)="adjustLoop('start', -0.1)">▼</button>
+                </div>
+              </div>
             </div>
             <div>
               <h5 class="text-center">Stop</h5>
-              <input type="text" class="input-neon w-100"
-                     placeholder="0:00"
-                     [(ngModel)]="loopEndInput"
-                     (blur)="onLoopInputChange()"
-                     (keydown.enter)="onLoopInputChange()"/>
+              <div class="d-flex align-items-center gap-1">
+                <input type="text" class="input-neon flex-grow-1"
+                       placeholder="0:00"
+                       [(ngModel)]="loopEndInput"
+                       (blur)="onLoopInputChange()"
+                       (keydown.enter)="onLoopInputChange()"/>
+                <div class="d-flex flex-column gap-1">
+                  <button class="btn btn-neon py-0 px-2" style="font-size:0.7rem;" (click)="adjustLoop('end', 0.1)">▲</button>
+                  <button class="btn btn-neon py-0 px-2" style="font-size:0.7rem;" (click)="adjustLoop('end', -0.1)">▼</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

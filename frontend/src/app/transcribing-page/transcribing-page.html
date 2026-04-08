@@ -52,6 +52,7 @@
       </div>
 
       <!-- Audio Controls -->
+
       <div id="audio-controls-container" class="d-flex justify-content-center gap-4 py-3">
         <button class="btn btn-lg btn-neon audio-btn" (click)="audioPlayer.restart()">
           <i class="bi-skip-start-btn"></i>
@@ -66,9 +67,21 @@
         </button>
       </div>
 
+
       <!-- Stems -->
       <div class="card-neon py-3 mx-3 mt-3">
         <div id="stems-container" class="d-flex justify-content-around gap-3">
+          @if(!audioPlayer.areStemsReady() && audioPlayer.currentSong()){
+            <div class="d-flex flex-column align-items-center gap-2 w-100 px-2">
+              <p class="text-center text-white mb-1" style="font-size: 0.82rem;">
+                Loading stems for the first time may take a bit longer but should only take the duration of the song. After this your stems will always be available right away!
+              </p>
+              <div class="stem-loading-track w-100">
+                <div class="stem-loading-fill" [style.animation-duration]="audioPlayer.stemLoadingDuration() + 's'"></div>
+              </div>
+            </div>
+          }
+          @if(audioPlayer.areStemsReady()){
 
           <button class="btn btn-neon"
                   [disabled]="!audioPlayer.areStemsReady()"
@@ -103,6 +116,7 @@
                   (click)="toggleOther()">
             other
           </button>
+          }
 
         </div>
       </div>

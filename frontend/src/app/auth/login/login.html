@@ -43,6 +43,10 @@
         Login
       </button>
 
+      @if (error) {
+        <div class="text-danger text-center mt-3">{{ error }}</div>
+      }
+
     </form>
 
     <!-- Register link -->

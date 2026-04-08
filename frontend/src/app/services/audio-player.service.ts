@@ -38,6 +38,7 @@ export class AudioPlayerService {
   };
 
   areStemsReady = signal(false);
+  stemLoadingDuration = signal(0);
   isPlaying = signal(false);
   isLoading = signal(false);
   currentSong = signal<Song | null>(null);
@@ -64,6 +65,7 @@ export class AudioPlayerService {
   }
 
   async loadSong(song: Song, stemLoad: boolean, stretchLoad: boolean, initialLoad: boolean) {
+    this.areStemsReady.set(false);
     if(initialLoad){
       this.originalFile = song.file;
       this.originalSong.set(song);
@@ -412,15 +414,20 @@ export class AudioPlayerService {
       this.player = new Tone.Player(audioUrl, () => {
         console.log("Player loaded!");
         this.player?.sync().start(0);
+        this.stemLoadingDuration.set(this.player?.buffer?.duration ?? 0);
         resolve(); // only resolves once buffer is ready
       }).toDestination();
     });
   }
 
   async stemLoad(song: Song){
-    await this.loadStems().then(() => {
+    try {
+      await this.loadStems();
       this.toggleStems();
-    })
+    } catch (err) {
+      console.warn("Stems not found, creating from scratch...", err);
+      await this.createStems();
+    }
   }
 
   async stretchLoad(song: Song) {

@@ -4,6 +4,7 @@ import com.byear.practiceassistant.model.User;
 import com.byear.practiceassistant.repo.UserRepository;
 import com.byear.practiceassistant.security.JwtResponse;
 import com.byear.practiceassistant.security.LoginRequest;
+import com.byear.practiceassistant.security.RegisterRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -37,7 +38,7 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
         if (userRepository.findByUsername(request.username()).isPresent()) {
             return ResponseEntity.badRequest().body("Username already exists");
         }
@@ -45,6 +46,7 @@ public class AuthController {
         User user = new User();
         user.setUsername(request.username());
         user.setPassword(passwordEncoder.encode(request.password()));
+        user.setEmail(request.email());
         user.setRole("BASIC"); // default role
         userRepository.save(user);
 

@@ -30,7 +30,7 @@ export class AuthService {
   }
 
   register(username: string, password: string, email: string) {
-    return this.http.post('/api/auth/register', { username, password, email})
+    return this.http.post('/api/auth/register', { username, password, email}, { responseType: 'text' })
   }
 
   logout() {

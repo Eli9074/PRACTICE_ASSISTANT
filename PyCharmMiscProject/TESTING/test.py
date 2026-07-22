@@ -7,7 +7,7 @@ import os
 
 app = FastAPI()
 
-TEMP_DIR = "temp"
+TEMP_DIR = "../temp"
 os.makedirs(TEMP_DIR, exist_ok=True)
 
 

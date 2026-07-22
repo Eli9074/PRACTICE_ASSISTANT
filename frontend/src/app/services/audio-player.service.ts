@@ -1,10 +1,9 @@
 import { Injectable, signal } from '@angular/core';
-import {Song, TranscribingService} from './transcribing.service';
+import { Song, TranscribingService } from './transcribing.service';
 import * as Tone from 'tone';
-import JSZip from "jszip";
-import {HttpClient} from '@angular/common/http';
-
-
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AudioPlayerService {
@@ -21,10 +20,6 @@ export class AudioPlayerService {
   private originalBassFile: File | null = null;
   private originalOtherFile: File | null = null;
 
-  vocalFilePath: string | undefined;
-  drumFilePath: string | undefined;
-  bassFilePath: string | undefined;
-  otherFilePath: string | undefined;
   public isFirstTime: Boolean = true;
 
   public player: Tone.Player | null = null;
@@ -42,20 +37,17 @@ export class AudioPlayerService {
   isPlaying = signal(false);
   isLoading = signal(false);
   currentSong = signal<Song | null>(null);
-  currentSongId = signal<number | null>(null);
+  currentSongId = signal<string | null>(null);
   originalSong = signal<Song | null>(null)
   currentSpeed = signal(1);
   areStemsEnabled = signal(false)
-  //scrubber signal
   currentPosition = signal(0);
-  //looping signals
   isLooping = signal(false);
-  loopStart = signal(0);  // in seconds
-  loopEnd = signal(0);    // in seconds
+  loopStart = signal(0);
+  loopEnd = signal(0);
   private loopStartRatio = 0;
   private loopEndRatio = 0;
 
-  //This is used to reset the playback when it finishes
   private _timeUpdateEventId: number | null = null;
 
   constructor(private transcribingService: TranscribingService, private http: HttpClient) {}
@@ -69,13 +61,16 @@ export class AudioPlayerService {
     if(initialLoad){
       this.originalFile = song.file;
       this.originalSong.set(song);
+      this.isLooping.set(false);
+      this.loopStart.set(0);
+      this.loopEnd.set(0);
+      this.loopStartRatio = 0;
+      this.loopEndRatio = 0;
     }
     if(!stemLoad && !stretchLoad){
       await this.defaultLoad(song);
       this.createStems()
-        .then(() => {
-
-        })
+        .then(() => {})
         .catch(err => {
           console.error("Failed to create stems:", err);
         });
@@ -91,18 +86,13 @@ export class AudioPlayerService {
       await this.bothLoad(song);
     }
 
-
-
-    // Reset Transport if restarting
     setInterval(() => {
       if (!this.player) return;
       const elapsed = Tone.Transport.seconds;
       const duration = this.player.buffer.duration;
 
-      // Update progress
       this.currentPosition.set(elapsed / duration);
 
-      // Loop check
       if (this.isLooping() && this.loopEnd() > 0 && elapsed >= this.loopEnd()) {
         Tone.Transport.seconds = this.loopStart();
         return;
@@ -115,7 +105,6 @@ export class AudioPlayerService {
         this.isPlaying.set(false);
       }
     }, 100);
-
   }
 
   async toggleStems(preserveMuteState: boolean = false) {
@@ -126,20 +115,18 @@ export class AudioPlayerService {
     }
     if (this.stemPlayers) {
       Object.values(this.stemPlayers).forEach(player => {
-        player.unsync?.();  // remove from Transport if it was synced
-        player.dispose();    // safely dispose
+        player.unsync?.();
+        player.dispose();
       });
-      this.stemPlayers = {}; // clear the reference
+      this.stemPlayers = {};
     }
     this.stemPlayers = {};
-    // Helper to create a player for a File or URL
+
     const createStemPlayer = async (file: File, name: string) => {
       if (!file) return;
       const url = URL.createObjectURL(file);
       const player = new Tone.Player(url, () => {
-        // Audio is fully loaded
         player.sync().start(0);
-        // Auto mute if needed
         player.mute = preserveMuteState ? this.stemMuteState[name] : false;
       }).toDestination();
 
@@ -151,7 +138,6 @@ export class AudioPlayerService {
     await createStemPlayer(this.otherFile, "other");
 
     if (!preserveMuteState) {
-      // Reset mute state to all unmuted on fresh toggle
       this.stemMuteState = { vocals: false, drums: false, bass: false, other: false };
     }
 
@@ -183,19 +169,14 @@ export class AudioPlayerService {
     this.areStemsEnabled.set(false);
   }
 
-  // ------------------------
-  // Core play/pause/seek
-  // ------------------------
   play() {
     if (!this.player) return;
-    // Start Transport only if it’s not already started
     if (Tone.Transport.state !== "started") {
       Tone.Transport.start();
     }
   }
 
   pause() {
-    // Pause Transport without stopping players
     if (Tone.Transport.state === "started") {
       Tone.Transport.pause();
     }
@@ -210,48 +191,26 @@ export class AudioPlayerService {
 
   async stretchStems(speed: number, backgroundLoad: boolean) {
     const originalSong = this.originalSong();
-    if (!originalSong || !this.originalFile) return;
+    const songId = this.currentSongId();
+    if (!originalSong || !songId) return;
 
     const wasPlaying = Tone.Transport.state === "started";
     const currentPosition = Tone.Transport.seconds;
-    if(!backgroundLoad){
+    if (!backgroundLoad) {
       this.isLoading.set(true);
       this.pause();
     }
 
-    const formData = new FormData();
-    formData.append("speed", speed.toString());
-    formData.append("original", this.originalFile);
-    formData.append("vocals", this.originalVocalFile!);
-    formData.append("drums",  this.originalDrumFile!);
-    formData.append("bass",   this.originalBassFile!);
-    formData.append("other",  this.originalOtherFile!);
+    const urls = await firstValueFrom(this.transcribingService.stretchStems(songId, speed));
 
-    const res = await fetch("http://localhost:8001/stretch", {
-      method: "POST",
-      body: formData
-    });
+    const fetchAsFile = async (url: string, filename: string) =>
+      firstValueFrom(this.transcribingService.fetchStemFile(url, filename));
 
-    const blob = await res.blob();
-
-    const zip = await JSZip.loadAsync(blob);
-
-    const getStem = async (name: string): Promise<File> => {
-      const entry = zip.file(`${name}.wav`);
-
-      if (!entry) {
-        throw new Error(`Missing stem: ${name}`);
-      }
-
-      const blob = await entry.async("blob");
-      return new File([blob], `${name}.wav`, { type: "audio/wav" });
-    };
-
-    const stretchedOriginal= await getStem("original")!;
-    this.vocalFile = await getStem("vocals")!;
-    this.drumFile  = await getStem("drums")!;
-    this.bassFile  = await getStem("bass")!;
-    this.otherFile = await getStem("other")!;
+    const stretchedOriginal = await fetchAsFile(urls['original'], "original.wav");
+    this.vocalFile = await fetchAsFile(urls['vocals'], "vocals.wav");
+    this.drumFile  = await fetchAsFile(urls['drums'], "drums.wav");
+    this.bassFile  = await fetchAsFile(urls['bass'], "bass.wav");
+    this.otherFile = await fetchAsFile(urls['other'], "other.wav");
 
     const songToLoad = { ...originalSong, file: stretchedOriginal };
 
@@ -269,24 +228,18 @@ export class AudioPlayerService {
 
   async stretchSingle(speed: number) {
     const song = this.originalSong();
-    if (!song || !this.originalFile) return;
+    const songId = this.currentSongId();
+    if (!song || !songId) return;
 
     const wasPlaying = Tone.Transport.state === "started";
     const currentPosition = Tone.Transport.seconds;
-    this.pause(); // add this
+    this.pause();
     this.isLoading.set(true);
 
-    const formData = new FormData();
-    formData.append("speed", speed.toString());
-    formData.append("file", this.originalFile);
-
-    const res = await fetch("http://localhost:8001/stretch_single", {
-      method: "POST",
-      body: formData
-    });
-
-    const blob = await res.blob();
-    const stretchedFile = new File([blob], "stretched.wav", { type: "audio/wav" });
+    const urls = await firstValueFrom(this.transcribingService.stretchSingle(songId, speed));
+    const stretchedFile = await firstValueFrom(
+      this.transcribingService.fetchStemFile(urls['original'], "stretched.wav")
+    );
     const songToLoad = { ...song, file: stretchedFile };
 
     this.currentSpeed.set(speed);
@@ -302,82 +255,55 @@ export class AudioPlayerService {
 
   async createStems(){
     const song = this.currentSong();
-    if (!song) return;
+    const songId = this.currentSongId();
+    if (!song || !songId) return;
 
-    const file: File = (song as any).file;
+    const file: File = song.file;
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('songId', songId);
 
     try {
-      const stems = await this.transcribingService.separateAudio(formData);
+      // GPU instance separates the audio AND writes stems to S3 + DynamoDB directly
+      await firstValueFrom(this.transcribingService.separateAudio(formData));
 
-      this.vocalFilePath = stems["vocals"];
-      this.drumFilePath  = stems["drums"];
-      this.bassFilePath  = stems["bass"];
-      this.otherFilePath = stems["other"];
+      // fetch presigned URLs for the stems it just saved
+      const stemUrls = await firstValueFrom(this.transcribingService.getStemUrls(songId));
 
-      this.vocalFile = await this.transcribingService.fetchStemFile(stems["vocals"], "vocals.wav");
-      this.drumFile  = await this.transcribingService.fetchStemFile(stems["drums"],  "drums.wav");
-      this.bassFile  = await this.transcribingService.fetchStemFile(stems["bass"],   "bass.wav");
-      this.otherFile = await this.transcribingService.fetchStemFile(stems["other"],  "other.wav");
+      this.vocalFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['vocals'], "vocals.wav"));
+      this.drumFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['drums'], "drums.wav"));
+      this.bassFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['bass'], "bass.wav"));
+      this.otherFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['other'], "other.wav"));
 
       this.originalVocalFile = this.vocalFile;
       this.originalDrumFile  = this.drumFile;
       this.originalBassFile  = this.bassFile;
       this.originalOtherFile = this.otherFile;
 
-      await this.saveStems();
-      await this.stretchStems(this.currentSpeed(), true);
+      if (this.currentSpeed() !== 1) {
+        await this.stretchStems(this.currentSpeed(), true);
+      }
       this.areStemsReady.set(true);
 
     } catch (err) {
       console.error("Error separating audio:", err);
     }
-
-  }
-
-  async saveStems() {
-    const song = this.currentSong();
-    if (!song) {
-      console.error("No song selected!");
-      return;
-    }
-
-    if (!this.vocalFilePath || !this.drumFilePath || !this.bassFilePath || !this.otherFilePath) {
-      console.error("Stem paths are not set!");
-      return;
-    }
-
-    const body = {
-      title: song.title,
-      artist: song.artist,
-      stems: {
-        vocals: this.vocalFilePath,
-        drums:  this.drumFilePath,
-        bass:   this.bassFilePath,
-        other:  this.otherFilePath
-      }
-    };
-
-    this.transcribingService.saveStemPaths(body).subscribe({
-      next: (res) => console.log("Response:", res),
-      error: (err) => console.error("Error:", err)
-    });
   }
 
   async loadStems() {
     const songId = this.currentSongId();
-    if(!songId){return;}
+    if (!songId) return;
     try {
-      const toFile = async (type: string, filename: string) => {
-        const blob = await this.transcribingService.getStemFile(songId, type).toPromise();
-        return new File([blob!], filename, { type: "audio/wav" });
-      };
+      const stemUrls = await firstValueFrom(this.transcribingService.getStemUrls(songId));
 
-      this.vocalFile = await toFile("VOCALS", "vocals.wav");
-      this.drumFile  = await toFile("DRUMS",  "drums.wav");
-      this.bassFile  = await toFile("BASS",   "bass.wav");
-      this.otherFile = await toFile("OTHER",  "other.wav");
+      if (!stemUrls.stems || Object.keys(stemUrls.stems).length === 0) {
+        throw new Error("No stems found for this song");
+      }
+
+      this.vocalFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['vocals'], "vocals.wav"));
+      this.drumFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['drums'], "drums.wav"));
+      this.bassFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['bass'], "bass.wav"));
+      this.otherFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['other'], "other.wav"));
 
       this.originalVocalFile = this.vocalFile;
       this.originalDrumFile  = this.drumFile;
@@ -392,7 +318,6 @@ export class AudioPlayerService {
       throw err;
     }
   }
-
 
   async defaultLoad(song: Song): Promise<void> {
     this.currentSong.set(song);
@@ -409,13 +334,12 @@ export class AudioPlayerService {
       this.player.dispose();
     }
 
-    // Wait for player to fully load before resolving
     await new Promise<void>((resolve) => {
       this.player = new Tone.Player(audioUrl, () => {
         console.log("Player loaded!");
         this.player?.sync().start(0);
         this.stemLoadingDuration.set(this.player?.buffer?.duration ?? 0);
-        resolve(); // only resolves once buffer is ready
+        resolve();
       }).toDestination();
     });
   }
@@ -450,7 +374,6 @@ export class AudioPlayerService {
     }
   }
 
-  //SEEK CONTROLS
   seek(percentage: number) {
     const duration = this.player?.buffer?.duration;
     if (!duration) return;
@@ -465,7 +388,6 @@ export class AudioPlayerService {
     this.currentPosition.set(seconds / duration);
   }
 
-  //LOOPING CONTROLS
   setLoop(start: number, end: number) {
     const duration = this.duration;
     const clampedStart = Math.max(0, start);
@@ -494,5 +416,4 @@ export class AudioPlayerService {
       Tone.Transport.seconds = this.loopStart();
     }
   }
-
 }

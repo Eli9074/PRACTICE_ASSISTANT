@@ -23,8 +23,8 @@ app.add_middleware(
 
 print("🔥 DEMUCS TEST API LOADED 🔥")
 
-TEMP_DIR = "temp"
-OUTPUT_DIR = "demucs_out"
+TEMP_DIR = "../temp"
+OUTPUT_DIR = "../demucs_out"
 os.makedirs(TEMP_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 

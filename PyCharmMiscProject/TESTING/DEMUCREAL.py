@@ -28,7 +28,7 @@ model = get_model("htdemucs")
 model.to(device)
 model.eval()
 
-TEMP_DIR = "temp"
+TEMP_DIR = "../temp"
 os.makedirs(TEMP_DIR, exist_ok=True)
 app.mount("/temp", StaticFiles(directory=TEMP_DIR), name="temp")
 

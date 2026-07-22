@@ -1,9 +1,10 @@
-import {Component, ElementRef, OnInit, signal, ViewChild} from '@angular/core';
-import {Router, RouterModule} from '@angular/router';
-import {Song, TranscribingService} from '../../services/transcribing.service';
-import {FormsModule} from '@angular/forms';
-import {SongDto} from '../../model/SongDto';
-import {AudioPlayerService} from '../../services/audio-player.service';
+import { Component, ElementRef, OnInit, signal, ViewChild } from '@angular/core';
+import { Router, RouterModule } from '@angular/router';
+import { Song, TranscribingService } from '../../services/transcribing.service';
+import { FormsModule } from '@angular/forms';
+import { SongDto } from '../../model/SongDto';
+import { AudioPlayerService } from '../../services/audio-player.service';
+import { switchMap } from 'rxjs';
 
 @Component({
   selector: 'app-transcribing-center',
@@ -11,16 +12,18 @@ import {AudioPlayerService} from '../../services/audio-player.service';
   templateUrl: './transcribing-center.html',
   styleUrl: './transcribing-center.scss',
 })
-export class TranscribingCenter{
+export class TranscribingCenter {
   selectedFile: File | null = null;
   title: string = '';
   artist: string = '';
   savedSongs = signal<SongDto[]>([]);
   @ViewChild('mp3Input') mp3Input!: ElementRef<HTMLInputElement>;
 
-  constructor(private transcribingService: TranscribingService, private router: Router, private audioPlayer: AudioPlayerService) {}
-
-
+  constructor(
+    private transcribingService: TranscribingService,
+    private router: Router,
+    private audioPlayer: AudioPlayerService
+  ) {}
 
   get truncatedFileName(): string {
     const name = this.selectedFile?.name;
@@ -38,33 +41,35 @@ export class TranscribingCenter{
   uploadSong() {
     if (!this.selectedFile) return alert('Please select a file first');
 
-    const formData = new FormData();
-    formData.append('file', this.selectedFile);
-    formData.append('title', this.title);
-    formData.append('artist', this.artist);
+    const file = this.selectedFile;
+    const contentType = file.type || 'audio/mpeg';
 
-    this.transcribingService.uploadSong(formData).subscribe({
-      next: (res) => {
-        const newSong: Song = {
-          file: this.selectedFile!,
-          title: this.title,
-          artist: this.artist
-        };
+    let songId: string;
+    let s3Key: string;
 
-        // Set metadata in TranscribingService
+    this.transcribingService.requestUpload(contentType).pipe(
+      switchMap(uploadRequest => {
+        songId = uploadRequest.songId;
+        s3Key = uploadRequest.s3Key;
+        return this.transcribingService.uploadFileToS3(uploadRequest.uploadUrl, file);
+      }),
+      switchMap(() =>
+        this.transcribingService.completeUpload(songId, this.title, this.artist, s3Key)
+      )
+    ).subscribe({
+      next: () => {
+        const newSong: Song = { file, title: this.title, artist: this.artist };
+
         this.transcribingService.setCurrentSong(newSong);
+        this.audioPlayer.currentSongId.set(songId);
+        this.audioPlayer.loadSong(newSong, false, false, true);
 
-        // Load file into AudioPlayerService
-        this.audioPlayer.loadSong(newSong,false, false, true);
-
-        // Navigate to the transcribing page
         this.router.navigate(['/transcribing']);
       },
-      error: (err: any) => {
+      error: (err) => {
         console.error(err);
         alert('Upload failed');
       }
     });
   }
-
 }

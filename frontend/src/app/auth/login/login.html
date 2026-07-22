@@ -1,62 +1,10 @@
+<!-- login.html -->
 <div class="d-flex justify-content-center align-items-center pt-5">
-
-  <div class="card-neon shadow-lg" style="max-width: 420px; width: 100%;">
-
-    <!-- Accent bar -->
+  <div class="card-neon shadow-lg text-center" style="max-width: 420px; width: 100%;">
     <div class="card-neon-accent"></div>
-
-    <h4 class="card-title text-center mb-4">Login</h4>
-
-    <form (ngSubmit)="submit()" #loginForm="ngForm">
-
-      <!-- Username -->
-      <div class="mb-3">
-        <input
-          type="text"
-          id="username"
-          name="username"
-          [(ngModel)]="username"
-          class="form-control input-neon"
-          placeholder="Username"
-          required
-        />
-      </div>
-
-      <!-- Password -->
-      <div class="mb-4">
-        <input
-          type="password"
-          id="password"
-          name="password"
-          [(ngModel)]="password"
-          class="form-control input-neon"
-          placeholder="Password"
-          required
-        />
-      </div>
-
-      <!-- Button -->
-      <button
-        type="submit"
-        class="btn btn-neon w-100"
-      >
-        Login
-      </button>
-
-      @if (error) {
-        <div class="text-danger text-center mt-3">{{ error }}</div>
-      }
-
-    </form>
-
-    <!-- Register link -->
-    <div class="mt-4 text-center">
-      <span class="card-text">Don't have an account?</span>
-      <a routerLink="/register" class="ms-1 text-decoration-none text-info">
-        Register
-      </a>
-    </div>
-
+    <h4 class="card-title mb-4">Welcome to By Ear</h4>
+    <button class="btn btn-neon w-100" (click)="loginWithCognito()">
+      Log In / Sign Up
+    </button>
   </div>
-
 </div>

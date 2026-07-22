@@ -25,20 +25,18 @@ export class TranscribingPage implements OnInit {
   ) {}
 
   ngOnInit() {
-    if (!this.audioPlayer.currentSong()) {
+    if (this.audioPlayer.isFirstTime && !this.audioPlayer.currentSong()) {
       const storedId = sessionStorage.getItem('currentSongId');
       if (storedId) {
-        const songId = parseInt(storedId);
-        this.transcribingService.getFileFromSong(songId).subscribe(res => {
-          const audioBlob = res.body!;
-          const title = res.headers.get('X-Song-Title') ?? '';
-          const artist = res.headers.get('X-Song-Artist') ?? '';
-          const file = new File([audioBlob], `${title}.mp3`, { type: 'audio/mpeg' });
-          const song: Song = { file, title, artist };
-          this.transcribingService.setCurrentSong(song);
-          this.audioPlayer.currentSongId.set(songId);
-          this.audioPlayer.isFirstTime = false;
-          this.audioPlayer.loadSong(song, true, false, true);
+        this.transcribingService.getSongFileUrl(storedId).subscribe(res => {
+          this.transcribingService.fetchFileFromUrl(res.downloadUrl).subscribe(audioBlob => {
+            const file = new File([audioBlob], `${res.title}.mp3`, { type: 'audio/mpeg' });
+            const song: Song = { file, title: res.title, artist: res.artist };
+            this.transcribingService.setCurrentSong(song);
+            this.audioPlayer.currentSongId.set(storedId);
+            this.audioPlayer.isFirstTime = false;
+            this.audioPlayer.loadSong(song, true, false, true);
+          });
         });
       }
     }

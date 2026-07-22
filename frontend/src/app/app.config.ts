@@ -1,5 +1,6 @@
 import {ApplicationConfig, provideBrowserGlobalErrorListeners} from '@angular/core';
 import { provideRouter } from '@angular/router';
+import { authInterceptor } from './auth/auth.interceptor';
 import {
   provideHttpClient,
   withInterceptors
@@ -13,25 +14,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
 
     provideHttpClient(
-      withInterceptors([
-        (req, next) => {
-          const token = localStorage.getItem('accessToken');
-
-          if (
-            token &&
-            req.url.startsWith('/api') &&
-            !req.url.startsWith('/api/auth')
-          ) {
-            req = req.clone({
-              setHeaders: {
-                Authorization: `Bearer ${token}`
-              }
-            });
-          }
-
-          return next(req);
-        }
-      ])
+      withInterceptors([authInterceptor])
     )
   ]
 };

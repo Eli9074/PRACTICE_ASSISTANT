@@ -1,5 +1,5 @@
 export interface SongDto {
-  id: number;
+  id: string;
   title: string;
   artist: string;
 }

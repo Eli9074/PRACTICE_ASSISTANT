@@ -116,7 +116,7 @@ export class TranscribingService {
 
   fetchStemFile(url: string, filename: string): Observable<File> {
     return this.http.get(url, { responseType: 'blob' }).pipe(
-      map(blob => new File([blob], filename, { type: 'audio/wav' }))
+      map(blob => new File([blob], filename, { type: 'audio/ogg' }))
     );
   }
 

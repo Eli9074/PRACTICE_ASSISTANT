@@ -8,11 +8,11 @@ import { firstValueFrom } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class AudioPlayerService {
 
-  private vocalFile: File = new File([new Blob()], "vocals.wav", { type: "audio/wav" });
-  private drumFile: File = new File([new Blob()], "drums.wav",  { type: "audio/wav" });
-  private bassFile: File = new File([new Blob()], "bass.wav",   { type: "audio/wav" });
-  private guitarFile: File = new File([new Blob()], "guitar.wav",  { type: "audio/wav" });
-  private otherFile: File = new File([new Blob()], "other.wav",  { type: "audio/wav" });
+  private vocalFile: File = new File([new Blob()], "vocals.oggg", { type: "audio/ogg" });
+  private drumFile: File = new File([new Blob()], "drums.ogg",  { type: "audio/ogg" });
+  private bassFile: File = new File([new Blob()], "bass.ogg",   { type: "audio/ogg" });
+  private guitarFile: File = new File([new Blob()], "guitar.ogg",  { type: "audio/ogg" });
+  private otherFile: File = new File([new Blob()], "other.ogg",  { type: "audio/ogg" });
 
   private originalFile: File | null = null;
   private originalVocalFile: File | null = null;
@@ -206,11 +206,11 @@ export class AudioPlayerService {
     const fetchAsFile = async (url: string, filename: string) =>
       firstValueFrom(this.transcribingService.fetchStemFile(url, filename));
 
-    const stretchedOriginal = await fetchAsFile(urls['original'], "original.wav");
-    this.vocalFile = await fetchAsFile(urls['vocals'], "vocals.wav");
-    this.drumFile  = await fetchAsFile(urls['drums'], "drums.wav");
-    this.bassFile  = await fetchAsFile(urls['bass'], "bass.wav");
-    this.otherFile = await fetchAsFile(urls['other'], "other.wav");
+    const stretchedOriginal = await fetchAsFile(urls['original'], "original.ogg");
+    this.vocalFile = await fetchAsFile(urls['vocals'], "vocals.ogg");
+    this.drumFile  = await fetchAsFile(urls['drums'], "drums.ogg");
+    this.bassFile  = await fetchAsFile(urls['bass'], "bass.ogg");
+    this.otherFile = await fetchAsFile(urls['other'], "other.ogg");
 
     const songToLoad = { ...originalSong, file: stretchedOriginal };
 
@@ -238,7 +238,7 @@ export class AudioPlayerService {
 
     const urls = await firstValueFrom(this.transcribingService.stretchSingle(songId, speed));
     const stretchedFile = await firstValueFrom(
-      this.transcribingService.fetchStemFile(urls['original'], "stretched.wav")
+      this.transcribingService.fetchStemFile(urls['original'], "stretched.ogg")
     );
     const songToLoad = { ...song, file: stretchedFile };
 
@@ -270,10 +270,10 @@ export class AudioPlayerService {
       // fetch presigned URLs for the stems it just saved
       const stemUrls = await firstValueFrom(this.transcribingService.getStemUrls(songId));
 
-      this.vocalFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['vocals'], "vocals.wav"));
-      this.drumFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['drums'], "drums.wav"));
-      this.bassFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['bass'], "bass.wav"));
-      this.otherFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['other'], "other.wav"));
+      this.vocalFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['vocals'], "vocals.ogg"));
+      this.drumFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['drums'], "drums.ogg"));
+      this.bassFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['bass'], "bass.ogg"));
+      this.otherFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['other'], "other.ogg"));
 
       this.originalVocalFile = this.vocalFile;
       this.originalDrumFile  = this.drumFile;
@@ -300,10 +300,10 @@ export class AudioPlayerService {
         throw new Error("No stems found for this song");
       }
 
-      this.vocalFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['vocals'], "vocals.wav"));
-      this.drumFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['drums'], "drums.wav"));
-      this.bassFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['bass'], "bass.wav"));
-      this.otherFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['other'], "other.wav"));
+      this.vocalFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['vocals'], "vocals.ogg"));
+      this.drumFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['drums'], "drums.ogg"));
+      this.bassFile  = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['bass'], "bass.ogg"));
+      this.otherFile = await firstValueFrom(this.transcribingService.fetchStemFile(stemUrls.stems['other'], "other.ogg"));
 
       this.originalVocalFile = this.vocalFile;
       this.originalDrumFile  = this.drumFile;

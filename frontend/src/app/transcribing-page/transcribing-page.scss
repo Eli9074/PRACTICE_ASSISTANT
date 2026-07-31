@@ -77,14 +77,25 @@
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 3px;
-  height: 16px;
+  width: 6px;
+  height: 32px;
   background: #50c8ff;
-  border-radius: 2px;
+  border-radius: 3px;
   cursor: ew-resize;
   box-shadow:
-    0 0 6px rgba(80, 200, 255, 0.9),
-    0 0 12px rgba(80, 200, 255, 0.4);
+    0 0 8px rgba(80, 200, 255, 0.9),
+    0 0 18px rgba(80, 200, 255, 0.5);
+
+  /* Wider invisible grab zone */
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px;
+    height: 44px;
+  }
 }
 
 .loading-overlay {
@@ -135,6 +146,66 @@
   }
 }
 
+.speed-display {
+  font-family: monospace;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.75);
+  letter-spacing: 0.03em;
+}
+
+.speed-scrubber {
+  position: relative;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.4),
+    0 0 6px rgba(140, 80, 255, 0.15);
+}
+
+.speed-scrubber-fill {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(140, 80, 255, 0.9), rgba(80, 200, 255, 0.9));
+  border-radius: 3px;
+  box-shadow: 0 0 8px rgba(140, 80, 255, 0.6);
+}
+
+.speed-scrubber-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: left 0.05s linear;
+  box-shadow:
+    0 0 8px rgba(140, 80, 255, 0.8),
+    0 0 16px rgba(80, 200, 255, 0.4);
+}
+
+.speed-notch {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 1px;
+  pointer-events: none;
+}
+
+.playback-time {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.03em;
+}
+
 .stem-loading-track {
   height: 6px;
   background: rgba(255, 255, 255, 0.08);
@@ -155,4 +226,8 @@
 @keyframes stem-load {
   from { width: 0%; }
   to   { width: 100%; }
+}
+
+.stem-volume-scrubber {
+  margin-top: 12px;
 }

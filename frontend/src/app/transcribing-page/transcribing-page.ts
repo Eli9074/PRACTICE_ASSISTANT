@@ -16,8 +16,44 @@ export class TranscribingPage implements OnInit {
   private isScrubbing = false;
   loopStartInput = '';
   loopEndInput = '';
-  private dragging: 'scrub' | 'loopStart' | 'loopEnd' | null = null;
   private readonly MARKER_THRESHOLD = 0.02;
+  private scrubberEl: HTMLElement | null = null;
+  private speedScrubberEl: HTMLElement | null = null;
+
+  readonly MIN_SPEED = 0.25;
+  readonly MAX_SPEED = 2.0;
+  readonly oneXPosition = (1 - 0.25) / (2 - 0.25);
+
+  private dragging: 'scrub' | 'loopStart' | 'loopEnd' | 'speed' | 'stemVolume' | null = null;
+  private draggingStemName: string | null = null;
+  private volumeScrubberEl: HTMLElement | null = null;
+
+  readonly VOLUME_MIN = 0;
+  readonly VOLUME_MAX = 2;
+
+  stemVolumePosition(name: string): number {
+    const value = this.audioPlayer.stemVolume[name] ?? 1;
+    return (value - this.VOLUME_MIN) / (this.VOLUME_MAX - this.VOLUME_MIN);
+  }
+
+  onStemVolumeScrubStart(event: MouseEvent, name: string) {
+    this.volumeScrubberEl = event.currentTarget as HTMLElement;
+    this.dragging = 'stemVolume';
+    this.draggingStemName = name;
+    this.applyStemVolumeFromEvent(event);
+  }
+
+  private applyStemVolumeFromEvent(event: MouseEvent) {
+    if (!this.volumeScrubberEl || !this.draggingStemName) return;
+    const rect = this.volumeScrubberEl.getBoundingClientRect();
+    const percentage = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+    const value = this.VOLUME_MIN + percentage * (this.VOLUME_MAX - this.VOLUME_MIN);
+    this.audioPlayer.setStemVolume(this.draggingStemName, value);
+  }
+
+  get speedPosition(): number {
+    return (this.audioPlayer.currentSpeed() - this.MIN_SPEED) / (this.MAX_SPEED - this.MIN_SPEED);
+  }
 
   constructor(
     private transcribingService: TranscribingService,
@@ -77,8 +113,8 @@ export class TranscribingPage implements OnInit {
   }
 
   onScrubStart(event: MouseEvent) {
-    const track = event.currentTarget as HTMLElement;
-    const rect = track.getBoundingClientRect();
+    this.scrubberEl = event.currentTarget as HTMLElement;
+    const rect = this.scrubberEl.getBoundingClientRect();
     const percentage = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
 
     if (this.audioPlayer.isLooping()) {
@@ -99,10 +135,28 @@ export class TranscribingPage implements OnInit {
     this.scrubTo(event);
   }
 
+  onSpeedScrubStart(event: MouseEvent) {
+    this.speedScrubberEl = event.currentTarget as HTMLElement;
+    this.dragging = 'speed';
+    this.applySpeedFromEvent(event);
+  }
+
+  @HostListener('document:mousemove', ['$event'])
   onScrubMove(event: MouseEvent) {
     if (!this.dragging) return;
-    const track = event.currentTarget as HTMLElement;
-    const rect = track.getBoundingClientRect();
+
+    if (this.dragging === 'speed') {
+      this.applySpeedFromEvent(event);
+      return;
+    }
+
+    if (this.dragging === 'stemVolume') {
+      this.applyStemVolumeFromEvent(event);
+      return;
+    }
+
+    if (!this.scrubberEl) return;
+    const rect = this.scrubberEl.getBoundingClientRect();
     const percentage = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
     const seconds = percentage * this.audioPlayer.duration;
 
@@ -121,14 +175,46 @@ export class TranscribingPage implements OnInit {
     }
   }
 
+  @HostListener('document:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent) {
+    const target = event.target as HTMLElement;
+    const tag = target?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return;
+
+    if (event.code === 'Space') {
+      event.preventDefault();
+      if (this.audioPlayer.isPlaying()) {
+        this.audioPlayer.pause();
+      } else {
+        this.audioPlayer.play();
+      }
+    } else if (event.code === 'ArrowLeft') {
+      event.preventDefault();
+      this.audioPlayer.restart();
+    }
+  }
+
+  @HostListener('document:mouseup')
   onScrubEnd() {
     this.dragging = null;
     this.isScrubbing = false;
+    this.scrubberEl = null;
+    this.speedScrubberEl = null;
+    this.volumeScrubberEl = null;
+    this.draggingStemName = null;
+  }
+
+  private applySpeedFromEvent(event: MouseEvent) {
+    if (!this.speedScrubberEl) return;
+    const rect = this.speedScrubberEl.getBoundingClientRect();
+    const percentage = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
+    const speed = this.MIN_SPEED + percentage * (this.MAX_SPEED - this.MIN_SPEED);
+    this.audioPlayer.changePlaybackSpeed(parseFloat(speed.toFixed(2)));
   }
 
   private scrubTo(event: MouseEvent) {
-    const track = event.currentTarget as HTMLElement;
-    const rect = track.getBoundingClientRect();
+    if (!this.scrubberEl) return;
+    const rect = this.scrubberEl.getBoundingClientRect();
     const percentage = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
     this.audioPlayer.seek(percentage);
   }
@@ -173,6 +259,10 @@ export class TranscribingPage implements OnInit {
 
   toggleLoop() {
     this.audioPlayer.toggleLoop();
+    if (this.audioPlayer.isLooping()) {
+      this.loopStartInput = this.formatTime(this.audioPlayer.loopStart());
+      this.loopEndInput = this.formatTime(this.audioPlayer.loopEnd());
+    }
   }
 
   formatTime(seconds: number): string {

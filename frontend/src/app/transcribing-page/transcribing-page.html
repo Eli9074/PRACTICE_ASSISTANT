@@ -17,12 +17,16 @@
         </h3>
       }
 
+      <!-- Playback Time -->
+      <div class="d-flex justify-content-end pe-2 pb-1">
+        <span class="playback-time">
+          {{ formatTime(audioPlayer.currentPosition() * audioPlayer.duration) }} / {{ formatTime(audioPlayer.duration) }}
+        </span>
+      </div>
+
       <!-- Scrubber -->
       <div class="scrubber"
-           (mousedown)="onScrubStart($event)"
-           (mousemove)="onScrubMove($event)"
-           (mouseup)="onScrubEnd()"
-           (mouseleave)="onScrubEnd()">
+           (mousedown)="onScrubStart($event)">
 
         <div class="scrubber-fill"
              [style.width.%]="audioPlayer.currentPosition() * 100">
@@ -83,39 +87,67 @@
           }
           @if(audioPlayer.areStemsReady()){
 
-          <button class="btn btn-neon"
-                  [disabled]="!audioPlayer.areStemsReady()"
-                  (click)="audioPlayer.areStemsEnabled() ? audioPlayer.toggleBackToMain() : audioPlayer.toggleStems(true)">
-            {{ audioPlayer.areStemsEnabled() ? 'Back to Mix' : 'Enable Stems' }}
-          </button>
+            <button class="btn btn-neon"
+                    [disabled]="!audioPlayer.areStemsReady()"
+                    (click)="audioPlayer.areStemsEnabled() ? audioPlayer.toggleBackToMain() : audioPlayer.toggleStems(true)">
+              {{ audioPlayer.areStemsEnabled() ? 'Back to Mix' : 'Enable Stems' }}
+            </button>
 
-          <button class="btn btn-neon"
-                  [disabled]="!audioPlayer.areStemsEnabled()"
-                  [ngClass]="{'btn-disabled': audioPlayer.stemPlayers?.['vocals']?.mute}"
-                  (click)="toggleVocals()">
-            vocals
-          </button>
+            <div class="d-flex flex-column align-items-center">
+              <button class="btn btn-neon"
+                      [disabled]="!audioPlayer.areStemsEnabled()"
+                      [ngClass]="{'btn-disabled': audioPlayer.stemElements?.['vocals']?.muted}"
+                      (click)="toggleVocals()">
+                vocals
+              </button>
+              <div class="speed-scrubber stem-volume-scrubber" style="width: 80px;" (mousedown)="onStemVolumeScrubStart($event, 'vocals')">
+                <div class="speed-scrubber-fill" [style.width.%]="stemVolumePosition('vocals') * 100"></div>
+                <div class="speed-notch" [style.left.%]="50"></div>
+                <div class="speed-scrubber-thumb" [style.left.%]="stemVolumePosition('vocals') * 100"></div>
+              </div>
+            </div>
 
-          <button class="btn btn-neon"
-                  [disabled]="!audioPlayer.areStemsEnabled()"
-                  [ngClass]="{'btn-disabled': audioPlayer.stemPlayers?.['drums']?.mute}"
-                  (click)="toggleDrums()">
-            drums
-          </button>
+            <div class="d-flex flex-column align-items-center ">
+              <button class="btn btn-neon"
+                      [disabled]="!audioPlayer.areStemsEnabled()"
+                      [ngClass]="{'btn-disabled': audioPlayer.stemElements?.['drums']?.muted}"
+                      (click)="toggleDrums()">
+                drums
+              </button>
+              <div class="speed-scrubber stem-volume-scrubber" style="width: 80px;" (mousedown)="onStemVolumeScrubStart($event, 'drums')">
+                <div class="speed-scrubber-fill" [style.width.%]="stemVolumePosition('drums') * 100"></div>
+                <div class="speed-notch" [style.left.%]="50"></div>
+                <div class="speed-scrubber-thumb" [style.left.%]="stemVolumePosition('drums') * 100"></div>
+              </div>
+            </div>
 
-          <button class="btn btn-neon"
-                  [disabled]="!audioPlayer.areStemsEnabled()"
-                  [ngClass]="{'btn-disabled': audioPlayer.stemPlayers?.['bass']?.mute}"
-                  (click)="toggleBass()">
-            bass
-          </button>
+            <div class="d-flex flex-column align-items-center ">
+              <button class="btn btn-neon"
+                      [disabled]="!audioPlayer.areStemsEnabled()"
+                      [ngClass]="{'btn-disabled': audioPlayer.stemElements?.['bass']?.muted}"
+                      (click)="toggleBass()">
+                bass
+              </button>
+              <div class="speed-scrubber stem-volume-scrubber" style="width: 80px;" (mousedown)="onStemVolumeScrubStart($event, 'bass')">
+                <div class="speed-scrubber-fill" [style.width.%]="stemVolumePosition('bass') * 100"></div>
+                <div class="speed-notch" [style.left.%]="50"></div>
+                <div class="speed-scrubber-thumb" [style.left.%]="stemVolumePosition('bass') * 100"></div>
+              </div>
+            </div>
 
-          <button class="btn btn-neon"
-                  [disabled]="!audioPlayer.areStemsEnabled()"
-                  [ngClass]="{'btn-disabled': audioPlayer.stemPlayers?.['other']?.mute}"
-                  (click)="toggleOther()">
-            other
-          </button>
+            <div class="d-flex flex-column align-items-center">
+              <button class="btn btn-neon"
+                      [disabled]="!audioPlayer.areStemsEnabled()"
+                      [ngClass]="{'btn-disabled': audioPlayer.stemElements?.['other']?.muted}"
+                      (click)="toggleOther()">
+                other
+              </button>
+              <div class="speed-scrubber stem-volume-scrubber" style="width: 80px;" (mousedown)="onStemVolumeScrubStart($event, 'other')">
+                <div class="speed-scrubber-fill" [style.width.%]="stemVolumePosition('other') * 100"></div>
+                <div class="speed-notch" [style.left.%]="50"></div>
+                <div class="speed-scrubber-thumb" [style.left.%]="stemVolumePosition('other') * 100"></div>
+              </div>
+            </div>
           }
 
         </div>
@@ -175,15 +207,21 @@
       <div class="d-flex flex-50 p-3">
         <div class="card-neon flex-grow-1">
 
-          <h3 class="text-center mb-3">Speed</h3>
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h3 class="mb-0">Speed</h3>
+            <span class="speed-display">{{ audioPlayer.currentSpeed().toFixed(2) }}x</span>
+          </div>
 
-          <input
-            type="text"
-            class="input-neon w-100"
-            placeholder="Enter speed (0.25–2)"
-            #speedinput
-            (keydown.enter)="onStretchEnter(speedinput.value)"
-          >
+          <div class="speed-scrubber" (mousedown)="onSpeedScrubStart($event)">
+            <div class="speed-scrubber-fill" [style.width.%]="speedPosition * 100"></div>
+            <div class="speed-notch" [style.left.%]="oneXPosition * 100"></div>
+            <div class="speed-scrubber-thumb" [style.left.%]="speedPosition * 100"></div>
+          </div>
+
+          <div class="d-flex justify-content-between mt-1" style="font-size: 0.7rem; color: rgba(255,255,255,0.4);">
+            <span>0.25x</span>
+            <span>2x</span>
+          </div>
 
         </div>
       </div>
